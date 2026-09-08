@@ -151,6 +151,29 @@ def test_nonuniform_b_transmission_left_per_element():
     assert b_values == {0.5, 1.0}
 
 
+# ── cooking_carrier/include_dhw forwarding ───────────────────────────────
+#
+# AttributeBuilder defaults cooking_carrier to "electric" (model_buem.py
+# only reports gas cooking energy when it's "gas") -- without this, no
+# request could ever reach the "gas" branch.
+
+
+def test_cooking_carrier_and_include_dhw_forwarded():
+    payload = _load_payload()
+    payload["features"][0]["properties"]["buem"]["building"]["cooking_carrier"] = "gas"
+    payload["features"][0]["properties"]["buem"]["building"]["include_dhw"] = False
+    attrs = _building_attrs(payload)
+    assert attrs["cooking_carrier"] == "gas"
+    assert attrs["include_dhw"] is False
+
+
+def test_cooking_carrier_omitted_leaves_default_to_attribute_builder():
+    payload = _load_payload()
+    attrs = _building_attrs(payload)
+    assert "cooking_carrier" not in attrs
+    assert "include_dhw" not in attrs
+
+
 # ── building.equipment forwarding ────────────────────────────────────────
 
 

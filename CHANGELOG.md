@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `cooking_carrier`/`include_dhw` were not forwarded from a request at
+  all -- `geojson_validator.py`'s `building.*` metadata whitelist never
+  included them, so `AttributeBuilder` always saw the `"electric"`
+  default regardless of what a caller sent, and `kitchen` (added in
+  6.1.0) could never read anything but 0 through `/api/process`. Now
+  forwarded from `building.cooking_carrier`/`building.include_dhw`,
+  alongside the other occupancy-generation inputs (`num_persons`,
+  `archetype`, `residential_units`).
+
 ## [6.1.0] - 2026-09-08
 
 Merges upstream's [6.0.0](#600---2026-09-01) (real per-type occupancy,
