@@ -236,9 +236,15 @@ class GeoJsonProcessor:
             else:
                 electricity = self._validate_array(elec_cfg or [], "electricity")
 
+        # DHW/cooking_gas: absent from res (like electricity above) when the
+        # request carried no dhw_liters/cooking_active occupancy signal --
+        # a service building, or residential input missing that detail.
+        dhw = self._validate_array(res.get("dhw", []), "dhw")
+        cooking_gas = self._validate_array(res.get("cooking_gas", []), "cooking_gas")
+
         # Build comprehensive thermal load profile
         profile = self._build_thermal_load_profile(
-            times, heating, cooling, electricity, elapsed,
+            times, heating, cooling, electricity, dhw, cooking_gas, elapsed,
             props.get("start_time"), props.get("end_time"),
             props.get("resolution", "60"), props.get("resolution_unit", "minutes")
         )
@@ -257,7 +263,7 @@ class GeoJsonProcessor:
         # Save timeseries if requested
         if self.include_timeseries and len(times):
             try:
-                fname = self._save_timeseries(times, heating, cooling, electricity)
+                fname = self._save_timeseries(times, heating, cooling, electricity, dhw, cooking_gas)
                 profile["timeseries_file"] = f"/api/files/{fname}"
             except Exception:
                 logger.exception(f"Timeseries save failed for {building_id}")
@@ -312,7 +318,7 @@ class GeoJsonProcessor:
             return np.array([], dtype=float)
 
     def _build_thermal_load_profile(
-        self, times, heating, cooling, electricity, elapsed,
+        self, times, heating, cooling, electricity, dhw, cooking_gas, elapsed,
         start_time, end_time, resolution, resolution_unit
     ) -> dict[str, Any]:
         """
@@ -322,8 +328,14 @@ class GeoJsonProcessor:
         ----------
         times : pd.DatetimeIndex or list
             Timestamps for the simulation.
-        heating, cooling, electricity : np.ndarray
-            Load arrays in kW.
+        heating, cooling, electricity, dhw : np.ndarray
+            Load arrays in kW -- thermal/electric energy, folded into
+            total_energy_demand.
+        cooking_gas : np.ndarray
+            Load array in kW_gas -- a different fuel channel (see
+            dhw_cooking.cooking_gas_energy_kwh), reported separately and
+            excluded from total_energy_demand rather than summed with
+            electricity/thermal kWh as if interchangeable.
         elapsed : float
             Processing time in seconds.
         start_time, end_time : str
@@ -357,12 +369,12 @@ class GeoJsonProcessor:
         # Calculate summary statistics -- {value, unit} measurement objects
         # matching response_schema.json's `energy_summary` $def (and the
         # gateway's LoadStats/Quantity structs).
-        def safe_stats(arr, power_unit="kW"):
+        def safe_stats(arr, power_unit="kW", energy_unit="kWh"):
             """Calculate safe {value, unit} statistics for array."""
             if len(arr) == 0:
                 zero_power = {"value": 0.0, "unit": power_unit}
                 return {
-                    "total": {"value": 0.0, "unit": "kWh"},
+                    "total": {"value": 0.0, "unit": energy_unit},
                     "max": dict(zero_power),
                     "min": dict(zero_power),
                     "mean": dict(zero_power),
@@ -371,7 +383,7 @@ class GeoJsonProcessor:
                 }
 
             return {
-                "total": {"value": float(np.sum(arr)), "unit": "kWh"},
+                "total": {"value": float(np.sum(arr)), "unit": energy_unit},
                 "max": {"value": float(np.max(arr)), "unit": power_unit},
                 "min": {"value": float(np.min(arr)), "unit": power_unit},
                 "mean": {"value": float(np.mean(arr)), "unit": power_unit},
@@ -382,9 +394,19 @@ class GeoJsonProcessor:
         heating_stats = safe_stats(heating)
         cooling_stats = safe_stats(np.abs(cooling))  # Ensure positive for cooling
         electricity_stats = safe_stats(electricity)
+        dhw_stats = safe_stats(dhw)
+        # A gas channel, not thermal/electric kWh -- kept out of safe_stats'
+        # default units so it is never mistaken for one in the response.
+        cooking_gas_stats = safe_stats(cooking_gas, power_unit="kW_gas", energy_unit="kWh_gas")
 
-        # Calculate overall metrics
-        total_energy = heating_stats["total"]["value"] + cooling_stats["total"]["value"] + electricity_stats["total"]["value"]
+        # Calculate overall metrics. cooking_gas is excluded: gas is a
+        # different fuel channel from electricity/thermal kWh, not another
+        # thermal load, so summing it here would make total_energy_demand
+        # mix units as if they were interchangeable.
+        total_energy = (
+            heating_stats["total"]["value"] + cooling_stats["total"]["value"]
+            + electricity_stats["total"]["value"] + dhw_stats["total"]["value"]
+        )
         peak_heating = heating_stats["max"]["value"]
         peak_cooling = cooling_stats["max"]["value"]
 
@@ -401,6 +423,12 @@ class GeoJsonProcessor:
                 "heating": heating_stats,
                 "cooling": cooling_stats,
                 "electricity": electricity_stats,
+                # Field names hot_water/kitchen match buem-gateway's
+                # v6-draft schema and enerplanet's own DB columns
+                # (hot_water_kwh_a/kitchen_kwh_a), not buem's internal
+                # dhw/cooking_gas attribute names.
+                "hot_water": dhw_stats,
+                "kitchen": cooking_gas_stats,
                 "total_energy_demand": {"value": total_energy, "unit": "kWh"},
                 "peak_heating_load": {"value": peak_heating, "unit": "kW"},
                 "peak_cooling_load": {"value": peak_cooling, "unit": "kW"}
@@ -414,16 +442,19 @@ class GeoJsonProcessor:
         # Include timeseries data if specifically requested in response (not just for saving)
         if self.include_timeseries and has_times:
             profile["timeseries"] = {
-                "unit": "kW",
+                "unit": "kW",  # applies to every series below except kitchen
+                "kitchen_unit": "kW_gas",
                 "timestamps": [t.isoformat() for t in times] if isinstance(times, pd.DatetimeIndex) else [str(t) for t in times],
                 "heating": heating.tolist(),
                 "cooling": cooling.tolist(),
-                "electricity": electricity.tolist()
+                "electricity": electricity.tolist(),
+                "hot_water": dhw.tolist(),
+                "kitchen": cooking_gas.tolist(),
             }
 
         return profile
 
-    def _save_timeseries(self, times, heating, cooling, electricity) -> str:
+    def _save_timeseries(self, times, heating, cooling, electricity, dhw, cooking_gas) -> str:
         """
         Save timeseries as gzip-compressed JSON.
 
@@ -447,6 +478,8 @@ class GeoJsonProcessor:
             "heat": [float(x) for x in heating.tolist()],
             "cool": [float(x) for x in cooling.tolist()],
             "electricity": [float(x) for x in electricity.tolist()] if len(electricity) else [],
+            "hot_water": [float(x) for x in dhw.tolist()] if len(dhw) else [],
+            "kitchen": [float(x) for x in cooking_gas.tolist()] if len(cooking_gas) else [],
         }
 
         with gzip.open(full_path, "wt", encoding="utf-8") as gz:

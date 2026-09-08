@@ -71,6 +71,13 @@ def run_model(cfg_dict, plot: bool = False, use_milp: bool = False, return_model
             "cooling": model.cooling_load.copy(),
             "elapsed_s": elapsed,
         }
+        # dhw/cooking_gas are only present when the cfg carried the occupancy
+        # signals _addDhwCooking() needs (cfg["dhw_liters"]/cfg["cooking_active"]);
+        # absent, like "electricity", rather than a zero-filled series.
+        if model.dhw_kWh is not None:
+            out["dhw"] = model.dhw_kWh.copy()
+        if model.cooking_gas_kWh is not None:
+            out["cooking_gas"] = model.cooking_gas_kWh.copy()
         if return_models:
             out["model"] = model
         return out
