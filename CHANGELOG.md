@@ -7,6 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.1.0] - 2026-09-08
+
+Merges upstream's [6.0.0](#600---2026-09-01) (real per-type occupancy,
+occupancy-driven cooking, per-fixture DHW, glazing classes) on top of
+this fork's own buem-gateway contract-pinning work below, plus the
+`b_transmission` fix and `hot_water`/`kitchen` response fields new in
+this release.
+
+**Known gap, not fixed here**: `cooking_carrier` (upstream's new field
+governing whether `kitchen` reports gas energy at all -- defaults
+`"electric"`, in which case `kitchen` is legitimately zero) has no path
+through the pinned v5 request schema/`geojson_validator.py` conversion.
+Every request through `/api/process` today gets the `"electric"`
+default, so `kitchen` reads 0 until a schema field for it exists.
+
+### Fixed
+
+- Per-element `b_transmission` was silently dropped whenever a
+  component's `U` was uniform across its elements (the normal case for
+  ignis-derived payloads, which give one `U` per surface type).
+  `geojson_validator.py` promoted `U` to the component level in that
+  case but never did the same for `b_transmission`, and
+  `model_buem.py`'s conductance calc only reads `b_transmission` from
+  the component once a component-level `U` exists -- so a non-default
+  value (TABULA's documented 0.5 for ground-contact floors) was treated
+  as 1.0, overestimating that component's heat loss by up to 2x. Now
+  promoted alongside `U`, same uniformity check.
+
+### Added
+
+- `hot_water`/`kitchen` in `thermal_load_profile.summary` and
+  `.timeseries` -- `model_buem.py` already computed `dhw_kWh`/
+  `cooking_gas_kWh` every run but nothing surfaced them in the
+  response. `hot_water` is fuel-agnostic heat demand, folded into
+  `total_energy_demand` like heating/cooling; `kitchen` is
+  gas-carrier cooking energy on its own fuel channel (`kWh_gas`/
+  `kW_gas` units), excluded from `total_energy_demand`. Matches
+  buem-gateway's `v6-draft` field names.
+
 ### Changed
 
 - **The BUEM-EnerPlanET API contract is now a pinned copy of
