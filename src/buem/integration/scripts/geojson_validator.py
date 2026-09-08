@@ -306,6 +306,18 @@ class GeoJsonValidator:
                 for e in elems:
                     e.pop("U", None)
 
+                # Once U is component-level, model_buem.py's conductance calc
+                # reads b_transmission from the component only -- its
+                # per-element b_transmission is reachable solely through the
+                # no-component-U branch. Promote it the same way, or a
+                # non-default per-element value (e.g. TABULA's 0.5 for
+                # ground-contact floors) is silently dropped.
+                b_values = [e.get("b_transmission", 1.0) for e in elems]
+                if len(set(b_values)) == 1:
+                    comp_data["b_transmission"] = b_values[0]
+                    for e in elems:
+                        e.pop("b_transmission", None)
+
         # Ensure all required component types exist (validator expects all five)
         _default_U = {"Walls": 1.0, "Windows": 2.8, "Roof": 1.0, "Floor": 1.0, "Doors": 3.0}
         for required in ("Walls", "Windows", "Roof", "Floor", "Doors"):

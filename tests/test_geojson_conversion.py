@@ -116,6 +116,41 @@ def test_weather_missing_is_rejected():
     assert any("weather" in str(e.message) for e in result.get_errors())
 
 
+# ── component-level U/b_transmission promotion ───────────────────────────
+#
+# model_buem.py's conductance calc reads b_transmission from the component
+# only once U is component-level (its per-element branch is unreachable
+# once a component U exists) -- so uniform per-element b_transmission must
+# be promoted the same way U is, or it is silently dropped.
+
+
+def test_uniform_b_transmission_promoted_alongside_uniform_u():
+    """building_01's Floor has one element (trivially uniform U and
+    b_transmission=0.5, TABULA's documented ground-contact-floor default)
+    -- both must end up component-level."""
+    payload = _load_payload()
+    attrs = _building_attrs(payload)
+    floor = attrs["components"]["Floor"]
+    assert floor["U"] == 1.7
+    assert floor["b_transmission"] == 0.5
+    assert "b_transmission" not in floor["elements"][0]
+
+
+def test_nonuniform_b_transmission_left_per_element():
+    """Walls share one U (promoted) but get a non-uniform b_transmission --
+    it must NOT be promoted (that would silently discard the per-element
+    difference), so it stays on each element."""
+    payload = _load_payload()
+    elements = payload["features"][0]["properties"]["buem"]["building"]["envelope"]["elements"]
+    walls = [e for e in elements if e["type"] == "wall"]
+    walls[0]["b_transmission"] = {"value": 0.5, "unit": "-"}
+    attrs = _building_attrs(payload)
+    wall_comp = attrs["components"]["Walls"]
+    assert "b_transmission" not in wall_comp
+    b_values = {e.get("b_transmission", 1.0) for e in wall_comp["elements"]}
+    assert b_values == {0.5, 1.0}
+
+
 # ── building.equipment forwarding ────────────────────────────────────────
 
 
