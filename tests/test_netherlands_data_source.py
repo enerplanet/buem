@@ -220,17 +220,25 @@ def test_csv_building_source_get_tabula_row_resolves_real_archetype():
 
 @requires_nl_data
 def test_csv_building_source_most_buildings_have_a_tabula_match():
-    """As of 2026-08-21 (nl_building_classifier's registration-status
-    exclusion, issue #15), the real residential population is ~1,461 of
-    3,105 raw Pand records -- the rest are Pands with no RIVM-registered
-    dwelling unit (garden sheds/garages/outbuildings), correctly left
-    unmatched, not a regression. Virtually all of the real residential
-    population still gets a TABULA match (previously: "most buildings
-    have a match" was checked against an inflated ~3,101-building
-    population that included those same non-dwellings)."""
+    """The real residential population is ~1,335 of 3,105 raw Pand
+    records, and virtually all of it gets a TABULA match. The other
+    ~1,770 are correctly left unmatched rather than being a regression,
+    for two distinct reasons:
+
+    - Pands with no RIVM-registered dwelling unit -- garden sheds,
+      garages, farm outbuildings (``nl_building_classifier``'s
+      registration-status exclusion).
+    - Pands whose registered BAG use function is entirely
+      non-residential -- shops, offices, schools, industry. These are
+      real occupied buildings, but they belong to the service-building
+      path (``service_building_type``) and TABULA, a residential
+      typology, has no archetype for them.
+
+    The bound tracks the residential population only, so it moves
+    whenever either exclusion changes; both narrowed it deliberately."""
     source = CsvBuildingSource(NL_DATA_DIR)
     n_matched = source.buildings["tabula_variant_code_id"].notna().sum()
-    assert 1400 < n_matched < 1500
+    assert 1250 < n_matched < 1400
     bldg_row = source.buildings[source.buildings["tabula_variant_code_id"].notna()].iloc[0]
     tabula_row = source.get_tabula_row(bldg_row["tabula_variant_code_id"])
     assert tabula_row is not None
@@ -270,17 +278,21 @@ def test_lod2mapper_maps_known_building_end_to_end():
 
 @requires_nl_data
 def test_lod2mapper_applies_u_value_overrides():
-    """The editable u_value_reference.csv table actually takes effect --
-    not just documentation. Building matched to NL.01/SFH must use that
+    """The editable envelope reference table actually takes effect -- not
+    just documentation. A building matched to NL.01/SFH must use that
     row's U-values, not whatever the raw TABULA archetype row's own
     U_Wall_1/etc. happen to be (they're equal here by construction, see
-    u_value_reference.csv's own provenance, but this test would catch a
-    wiring regression that silently stopped applying the override)."""
-    import pandas as pd
+    nl_envelope_reference.csv's own provenance, but this test would catch
+    a wiring regression that silently stopped applying the override).
 
+    Resolves the table the same way the runners do, so it follows the
+    packaged national file, a region-local override, or an explicit path
+    without needing to know which is in play."""
     from buem.buildings.mapping.lod2_mapper import LOD2Mapper
+    from buem.config.reference_values import resolve_envelope_reference
 
-    overrides = pd.read_csv(f"{NL_DATA_DIR}/u_value_reference.csv")
+    overrides = resolve_envelope_reference(None, NL_DATA_DIR, country="NL")
+    assert overrides is not None, "no envelope reference resolved for NL"
     source = CsvBuildingSource(NL_DATA_DIR)
     mapper = LOD2Mapper(source, country="NL", u_value_overrides=overrides)
     match = source.buildings[source.buildings["bag_pand_id"] == _KNOWN_RESIDENTIAL_BAG_PAND_ID].iloc[0]

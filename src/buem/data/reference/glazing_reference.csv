@@ -1,0 +1,33 @@
+# Glazing thermal and solar properties, by glazing type.
+#
+# Single point of configuration for window U- and g-values. Loaded by
+# buem.config.reference_values.load_glazing_table(); resolved by
+# resolve_glazing(). An envelope reference table may name a glazing_type
+# here instead of carrying a bare U-value, so the two stay consistent and
+# a reviewer can see which product class an archetype assumes.
+#
+# u_value  -- W/(m2*K), the centre-of-glass-plus-frame U for the whole
+#             window as buem models it (a single element, no separate
+#             frame term). Dutch practice quotes U_g for the glass alone;
+#             the figures here are the glass value, since buem applies no
+#             separate frame fraction to the conduction term.
+# g_value  -- solar factor (SHGC), fraction of incident solar radiation
+#             transmitted as heat. Falls as coatings and panes are added,
+#             which is why better-insulating glazing admits less free
+#             solar gain -- both effects matter and both belong here.
+#
+# Hand-editing is supported and expected: this file is the editable
+# source of truth, not a generated artifact. Update the source column too
+# if you change a value.
+#
+# The Dutch stock has been overwhelmingly double-glazed or better since
+# the 1980s, so `single` should be used only where a building is known to
+# retain original glazing -- assuming it for an entire construction era
+# materially overstates that era's heat loss.
+glazing_type,u_value,g_value,description,source
+single,5.20,0.85,Single pane, uncoated,"Standard single-glazing value; pre-1975 as-built construction only."
+double_uncoated,2.90,0.76,Double glazing without coating or gas fill,"Plain double glazing, typical of 1975-1990 construction."
+HR,1.85,0.72,Double glazing with a basic heat-reflective coating,"HR class, U_g 1.7-2.0; midpoint taken."
+HR_plus,1.45,0.62,Double glazing with reflective coating and gas fill,"HR+ class, U_g 1.3-1.6; midpoint taken."
+HR_plus_plus,1.10,0.60,Double glazing with optimized coatings and argon fill,"HR++ class, U_g 1.0-1.2; midpoint taken. The most common standard in the current Dutch stock."
+HR_plus_plus_plus,0.70,0.50,Triple glazing with double coatings and argon or krypton fill,"HR+++ class, U_g 0.5-0.9; midpoint taken."

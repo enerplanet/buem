@@ -16,6 +16,7 @@ buildings, a reference table for service buildings.
 """
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 
 import pandas as pd
@@ -25,6 +26,13 @@ from buem.buildings.mapping.tabula_helpers import (
     safe_series_float,
     select_primary_variant,
 )
+from buem.config.reference_values import resolve_glazing
+
+logger = logging.getLogger(__name__)
+
+# (column, repr(default)) pairs already reported, so a batch run logs each
+# distinct substitution once rather than once per building.
+_WARNED_SERVICE_DEFAULTS: set[tuple[str, str]] = set()
 
 
 @dataclass
@@ -94,8 +102,18 @@ def spec_from_tabula(
         wall_U = float(u_value_overrides["U_Wall"])
         roof_U = float(u_value_overrides["U_Roof"])
         floor_U = float(u_value_overrides["U_Floor"])
-        window_U = float(u_value_overrides["U_Window"])
         door_U = float(u_value_overrides["U_Door"])
+        # U_Window may name a glazing class from glazing_reference.csv
+        # instead of carrying a bare number. Naming the class keeps the
+        # U- and g-values consistent with each other -- better-insulating
+        # glazing also admits less solar gain, and setting only the U
+        # would silently keep an unrelated g.
+        glazing = resolve_glazing(u_value_overrides["U_Window"])
+        if glazing is not None:
+            window_U = glazing.u_value
+            window_g_gl = glazing.g_value
+        else:
+            window_U = float(u_value_overrides["U_Window"])
 
     adjusted = apply_refurbishment_measures(
         tabula_row,
@@ -121,12 +139,12 @@ def spec_from_tabula(
         horizontal_window_area=safe_series_float(tabula_row, "A_Window_Horizontal", 0.0),
         n_air_infiltration=safe_series_float(tabula_row, "n_air_infiltration", 0.5),
         n_air_use=safe_series_float(tabula_row, "n_air_use", 0.5),
-        c_m=safe_series_float(tabula_row, "c_m", 165.0),
-        h_room=safe_series_float(tabula_row, "h_room", 2.5),
-        F_sh_hor=safe_series_float(tabula_row, "F_sh_hor", 0.8),
-        F_sh_vert=safe_series_float(tabula_row, "F_sh_vert", 0.75),
-        F_f=safe_series_float(tabula_row, "F_f", 0.2),
-        F_w=safe_series_float(tabula_row, "F_w", 1.0),
+        c_m=safe_series_float(tabula_row, "c_m", 165.0, warn=False),
+        h_room=safe_series_float(tabula_row, "h_room", 2.5, warn=False),
+        F_sh_hor=safe_series_float(tabula_row, "F_sh_hor", 0.8, warn=False),
+        F_sh_vert=safe_series_float(tabula_row, "F_sh_vert", 0.75, warn=False),
+        F_f=safe_series_float(tabula_row, "F_f", 0.2, warn=False),
+        F_w=safe_series_float(tabula_row, "F_w", 1.0, warn=False),
         phi_int=safe_series_float(tabula_row, "phi_int", None),
         q_w_nd=safe_series_float(tabula_row, "q_w_nd", None),
         design_T_min=safe_series_float(tabula_row, "Theta_e", -12.0),
@@ -152,9 +170,27 @@ def spec_from_service_reference(reference_row: pd.Series) -> ArchetypeSpec:
     ``neighbour_status`` is always ``B_Alone``: a warehouse or supermarket
     is modelled with its full envelope exposed.
     """
-    def _f(column: str, default: float) -> float:
+    def _f(column: str, default: float, *, warn: bool = True) -> float:
+        """Read a float from the reference row, naming any substitution.
+
+        Same visibility rule as
+        :func:`buem.buildings.mapping.tabula_helpers.safe_series_float`: a
+        missing column is not an error, but the operator should see in the
+        log that a number was assumed rather than read.
+        """
         value = reference_row.get(column)
-        return float(value) if value is not None and not pd.isna(value) else default
+        if value is not None and not pd.isna(value):
+            return float(value)
+        if warn:
+            key = (column, repr(default))
+            if key not in _WARNED_SERVICE_DEFAULTS:
+                _WARNED_SERVICE_DEFAULTS.add(key)
+                logger.warning(
+                    "Service-building reference column %r is missing or NaN -- "
+                    "substituting the default %r. Further occurrences are not "
+                    "repeated.", column, default,
+                )
+        return default
 
     return ArchetypeSpec(
         wall_U=_f("U_Wall", 1.0), wall_b=1.0,
@@ -163,12 +199,12 @@ def spec_from_service_reference(reference_row: pd.Series) -> ArchetypeSpec:
         window_U=_f("U_Window", 2.9),
         window_g_gl=_f("g_gl_Window", 0.6),
         door_U=_f("U_Door", 3.0),
-        door_ratio=_f("door_to_wall_ratio", 0.02),
+        door_ratio=_f("door_to_wall_ratio", 0.02, warn=False),
         horizontal_window_area=0.0,
         n_air_infiltration=_f("n_air_infiltration", 0.3),
         n_air_use=_f("n_air_use", 0.7),
-        c_m=_f("c_m", 165.0),
-        h_room=_f("h_room", 3.0),
+        c_m=_f("c_m", 165.0, warn=False),
+        h_room=_f("h_room", 3.0, warn=False),
         # Shading/frame factors are geometry conventions rather than
         # typology data, so they keep the same ISO 13790 defaults the
         # residential path falls back to.

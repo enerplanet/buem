@@ -1589,21 +1589,61 @@ class ModelBUEM:
         self.dhw_kWh: pd.Series | None = None
         self.cooking_gas_kWh: pd.Series | None = None
 
-        dhw_liters = self.cfg.get("dhw_liters")
-        if isinstance(dhw_liters, pd.Series):
-            self.dhw_kWh = dhw_cooking.dhw_energy_kwh(dhw_liters)
+        if self.cfg.get("include_dhw", True):
+            # Prefer the per-fixture-priced series: occupancy resolves each
+            # draw's fixture and they are delivered at different
+            # temperatures, so pricing the blended total at one delta-T
+            # misprices every draw but the one it matches. Falls back to
+            # that blended conversion for a cfg carrying only liters.
+            dhw_kwh = self.cfg.get("dhw_kwh")
+            dhw_liters = self.cfg.get("dhw_liters")
+            if isinstance(dhw_kwh, pd.Series):
+                self.dhw_kWh = dhw_kwh.rename("dhw_kWh")
+            elif isinstance(dhw_liters, pd.Series):
+                self.dhw_kWh = dhw_cooking.dhw_energy_kwh(dhw_liters)
+
+        # Carrier decides whether cooking is reported as its own (gas)
+        # term at all. occupancy models cooking appliances electrically,
+        # so an electrically-cooking household's cooking energy is already
+        # inside elecLoad and reporting it again would double-count it in
+        # any total-energy sum.
+        carrier = str(self.cfg.get("cooking_carrier", "gas")).lower()
+        if carrier == "gas":
+            self.cooking_gas_kWh = self._cooking_energy_kwh()
+
+    def _cooking_energy_kwh(self) -> pd.Series | None:
+        """Hourly cooking energy, preferring occupancy's own per-appliance
+        draws over a distributed annual figure.
+
+        ``cooking_kwh`` comes from occupancy's stochastic model restricted
+        to its kitchen appliances, so both the timing and the magnitude of
+        each cooking event follow what that household actually owns and
+        does. Where it is absent -- an older cfg, or a caller that supplies
+        only the boolean ``cooking_active`` flag -- a per-household
+        reference total is spread across the flagged hours instead, which
+        keeps the timing real but not the magnitude.
+
+        Neither path depends on ``self.heating_load``: deriving cooking
+        from simulated heating, as an earlier convention did, made the
+        cooking figure inherit any heating error, so a building
+        overestimating heating also reported overestimated cooking and the
+        two could never be separated against measured gas.
+        """
+        cooking_kwh = self.cfg.get("cooking_kwh")
+        if isinstance(cooking_kwh, pd.Series):
+            return cooking_kwh.rename("cooking_gas_kWh")
 
         cooking_active = self.cfg.get("cooking_active")
-        if isinstance(cooking_active, pd.Series):
-            # heating_kWh, kW-per-hour summed over an hourly-resolution
-            # year (self.stepSize is always 1.0 in practice -- buem only
-            # ever runs on hourly weather -- but multiplying by it is the
-            # technically correct kW -> kWh conversion, not an assumption).
-            heating_kwh_annual = float(np.sum(self.heating_load) * self.stepSize)
-            annual_cooking_kwh = dhw_cooking.cooking_annual_kwh_from_heating(heating_kwh_annual)
-            self.cooking_gas_kWh = dhw_cooking.cooking_gas_energy_kwh(
-                cooking_active, annual_total_kwh=annual_cooking_kwh
-            )
+        if not isinstance(cooking_active, pd.Series):
+            return None
+        # Scaled by residential_units so a multi-dwelling block gets every
+        # dwelling's cooking, matching how Q_ig/elecLoad are already
+        # scaled. cooking_kwh above is scaled upstream, in AttributeBuilder.
+        units = max(float(self.cfg.get("residential_units") or 1.0), 1.0)
+        return dhw_cooking.cooking_gas_energy_kwh(
+            cooking_active,
+            annual_total_kwh=dhw_cooking.COOKING_ANNUAL_KWH_PER_HOUSEHOLD * units,
+        )
 
     def _readResults(self):
         """

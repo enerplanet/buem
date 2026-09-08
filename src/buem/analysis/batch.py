@@ -65,6 +65,7 @@ from buem.config.building_registry import (
     DEFAULT_WEATHER_PROVIDER,
     DEFAULT_YEAR,
 )
+from buem.config.reference_values import resolve_envelope_reference
 
 logger = logging.getLogger(__name__)
 
@@ -126,6 +127,7 @@ _PASSTHROUGH_COLUMNS = (
 # ~dozens of serializations and thousands.
 _WORKER_MAPPER = None
 _WORKER_WEATHER: pd.DataFrame | None = None
+_WORKER_REGION_CODE: str | None = None
 
 
 def build_source(source_kind: str, source_path: str | Path):
@@ -154,9 +156,10 @@ def _worker_init(
     u_value_overrides: pd.DataFrame | None,
     service_reference: pd.DataFrame | None,
     measure_overrides: pd.DataFrame | None,
+    region_code: str | None = None,
 ) -> None:
     """Runs once per spawned worker process (see module docstring)."""
-    global _WORKER_MAPPER, _WORKER_WEATHER
+    global _WORKER_MAPPER, _WORKER_WEATHER, _WORKER_REGION_CODE
 
     import cvxpy  # noqa: F401
     import numpy  # noqa: F401
@@ -172,6 +175,7 @@ def _worker_init(
         refurbishment_measure_overrides=measure_overrides,
     )
     _WORKER_WEATHER = weather_df
+    _WORKER_REGION_CODE = region_code
 
 
 def _source_row(building_feature_id: int) -> pd.Series | None:
@@ -243,6 +247,10 @@ def _process_one_building(building_feature_id: int, use_milp: bool) -> dict[str,
         # gains. Results stay whole-building; the per-dwelling division for a
         # per-dwelling reference belongs to the aggregation step.
         attrs["residential_units"] = units
+        # Selects this region's own occupants-per-dwelling rows from
+        # data/reference/num_persons_by_building_type.csv where the run
+        # names a region; None falls back to the country-wide figures.
+        attrs["region_code"] = _WORKER_REGION_CODE
 
         merged = AttributeBuilder(payload_attrs=attrs).build()
         cfg = CfgBuilding(merged).to_cfg_dict()
@@ -274,6 +282,11 @@ class BatchConfig:
     data_dir: str | Path | None = None
     u_value_overrides_path: str | Path | None = None
     country: str = "DE"
+    # Statistical region whose own occupants-per-dwelling figures apply
+    # (a CBS "RegioS" code such as "GM0200" for a Dutch municipality).
+    # None uses the country-wide rows -- see
+    # buem.config.reference_values.resolve_num_persons.
+    region_code: str | None = None
     # Ignored when the source carries real geometry: a CSV region derives
     # its own centre so a Netherlands run doesn't fetch German weather.
     latitude: float = DEFAULT_LATITUDE
@@ -317,23 +330,19 @@ def _load_region_table(config: BatchConfig, filename: str, purpose: str) -> pd.D
 
 
 def _load_u_value_overrides(config: BatchConfig) -> pd.DataFrame | None:
-    """Load the human-editable U-value override table, if there is one.
+    """Load the human-editable as-built envelope table, if there is one.
 
-    Defaults to ``u_value_reference.csv`` inside a CSV source's own
-    directory -- the same convention the Netherlands validation runner
-    uses, so a batch run and a validation run of the same region apply
-    identical U-values rather than silently diverging.
+    Delegates the precedence -- explicit path, then a region-local table,
+    then the packaged national one -- to
+    :func:`buem.config.reference_values.resolve_envelope_reference`, so a
+    batch run and a validation run of the same region resolve the same
+    table rather than silently diverging.
     """
-    if config.u_value_overrides_path is not None:
-        return pd.read_csv(config.u_value_overrides_path)
-    if config.source_kind != "csv":
-        return None
-    default_path = Path(config.source_path) / "u_value_reference.csv"
-    if default_path.exists():
-        logger.info("Applying U-value overrides from %s", default_path)
-        return pd.read_csv(default_path)
-    logger.warning("No u_value_reference.csv at %s -- using raw TABULA U-values.", default_path)
-    return None
+    return resolve_envelope_reference(
+        config.u_value_overrides_path,
+        config.source_path if config.source_kind == "csv" else None,
+        country=config.country,
+    )
 
 
 def _read_completed_rows(output_path: Path) -> list[dict[str, Any]]:
@@ -505,6 +514,7 @@ def run_batch(config: BatchConfig, output_path: str | Path) -> Path:
         initargs=(
             config.source_kind, str(config.source_path), config.country,
             weather_df, u_value_overrides, service_reference, measure_overrides,
+            config.region_code,
         ),
     ) as executor:
         # The writer truncates whatever it opened, so the rows carried over
@@ -561,6 +571,9 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--labeled-only", action="store_true", help="Only buildings with a real energy label (matched_via_label).")
     parser.add_argument("--resume", action="store_true", help="Skip building ids already present in --output and keep their rows.")
     parser.add_argument("--country", type=str, default="DE", help="TABULA country code for archetype matching.")
+    parser.add_argument("--region-code", type=str, default=None,
+                        help="Statistical region whose occupants-per-dwelling figures apply, "
+                             "e.g. 'GM0200' (Apeldoorn). Omit to use the country-wide figures.")
     parser.add_argument("--latitude", type=float, default=DEFAULT_LATITUDE)
     parser.add_argument("--longitude", type=float, default=DEFAULT_LONGITUDE)
     parser.add_argument("--year", type=int, default=DEFAULT_YEAR)
@@ -583,6 +596,7 @@ def main(argv: list[str] | None = None) -> Path:
         data_dir=args.data_dir,
         u_value_overrides_path=args.u_value_overrides,
         country=args.country,
+        region_code=args.region_code,
         latitude=args.latitude,
         longitude=args.longitude,
         year=args.year,

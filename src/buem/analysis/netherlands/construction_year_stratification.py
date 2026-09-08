@@ -36,6 +36,9 @@ from pathlib import Path
 
 import pandas as pd
 
+from buem.analysis.netherlands.cbs_household_size import (
+    NATIONAL_HOUSEHOLD_SIZE_BY_BUILDING_TYPE,
+)
 from buem.analysis.provider_comparison import building_attrs_from
 from buem.analysis.weather_providers import extract_provider_weather
 from buem.buildings.building import Building
@@ -43,6 +46,7 @@ from buem.buildings.datasources.csv_source import CsvBuildingSource
 from buem.buildings.mapping.lod2_mapper import LOD2Mapper
 from buem.config.building_registry import DEFAULT_WEATHER_PROVIDER, DEFAULT_YEAR
 from buem.config.cfg_building import CfgBuilding
+from buem.config.reference_values import resolve_envelope_reference
 
 logger = logging.getLogger(__name__)
 
@@ -86,20 +90,19 @@ class EraStratum:
         return self.tabula_estimate_kwh_m2 * self.a_ref_m2
 
 
-# Illustrative, not a precise CBS citation -- CBS's own household-composition
-# tables (71486ned/82905ned) are by region/age, not cross-tabulated against
-# dwelling type; no public StatLine table with exactly this split is known.
-# Approximate values informed by general Dutch housing-research consensus
-# (WoON-style figures): detached/terraced households run larger than
-# apartment households. Used only to test sensitivity -- whether varying
-# num_persons by type changes the buem-vs-CBS picture meaningfully -- not
-# presented as a precise per-type figure.
-DEFAULT_NUM_PERSONS_BY_TYPE: dict[str, float] = {
-    "SFH": 2.6,
-    "TH": 2.4,
-    "MFH": 2.0,
-    "AB": 1.8,
-}
+# Real CBS figures -- national persons per dwelling in stock, private
+# households only, derived in buem.analysis.netherlands.cbs_household_size
+# from tables 85035NED (dwelling stock), 86064NED (persons by
+# single-/multi-family dwelling) and 85140NED (the five-way dwelling-type
+# split). See that module for the derivation and its limits, notably that
+# CBS publishes no MFH/AB distinction, so both take the same figure.
+#
+# Prefer household_size_by_building_type(region_code) over this constant
+# when the region is known: municipal figures differ materially from the
+# national ones, most of all for apartments.
+DEFAULT_NUM_PERSONS_BY_TYPE: dict[str, float] = dict(
+    NATIONAL_HOUSEHOLD_SIZE_BY_BUILDING_TYPE
+)
 
 
 def _load_construction_class_lookup(
@@ -290,8 +293,9 @@ def run_era_stratification(
     pop = population_distribution(data_dir)
 
     source = CsvBuildingSource(data_dir)
-    overrides_path = Path(u_value_overrides_path) if u_value_overrides_path else data_dir / "u_value_reference.csv"
-    u_value_overrides = pd.read_csv(overrides_path) if overrides_path.exists() else None
+    u_value_overrides = resolve_envelope_reference(
+        u_value_overrides_path, data_dir, country="NL",
+    )
     mapper = LOD2Mapper(source, country="NL", u_value_overrides=u_value_overrides)
 
     from buem.buildings.mapping.geometry_utils import building_lat_lon

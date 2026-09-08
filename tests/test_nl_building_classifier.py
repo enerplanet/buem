@@ -171,3 +171,184 @@ def test_min_service_building_footprint_constant_is_between_real_loenen_cases():
     16/5 m² garden structures) -- not a finely-tuned cutoff, just needs
     to sit clearly between the two real clusters."""
     assert 16.0 < MIN_SERVICE_BUILDING_FOOTPRINT_M2 < 1718.0
+
+
+def _use_summary(n_residential, n_non_residential, functions, area=200.0):
+    from buem.buildings.datasources.bag_use_function import PandUseSummary
+    return PandUseSummary(
+        n_residential_units=n_residential,
+        n_non_residential_units=n_non_residential,
+        function_counts=functions,
+        non_residential_area_m2=area,
+    )
+
+
+def _one_building(pand_id="NL.IMBAG.Pand.1", footprint=200.0):
+    return pd.DataFrame([{
+        "bag_pand_id": pand_id,
+        "footprint_area": footprint,
+        "attached_neighbour_id": None,
+        "is_greenhouse_or_warehouse": False,
+        "is_glass_roof": False,
+    }])
+
+
+def test_purely_non_residential_use_routes_to_a_service_type():
+    """A building whose every registered BAG unit is non-residential is a
+    service building, even though its unit count is indistinguishable
+    from a dwelling's."""
+    df = _one_building()
+    result = classify_all(
+        df,
+        units_by_pand_id={"NL.IMBAG.Pand.1": 1.0},
+        use_by_pand_id={"NL.IMBAG.Pand.1": _use_summary(0, 1, {"winkelfunctie": 1})},
+    )
+    assert not result["is_residential"].iloc[0]
+    assert result["service_building_type"].iloc[0] == "supermarket"
+    assert result["building_type"].iloc[0] is None
+
+
+def test_mixed_use_building_stays_residential():
+    """A shop with a flat above keeps its dwelling: buem models one use
+    per building, so claiming it for the service path would discard the
+    residential half."""
+    df = _one_building()
+    result = classify_all(
+        df,
+        units_by_pand_id={"NL.IMBAG.Pand.1": 2.0},
+        use_by_pand_id={"NL.IMBAG.Pand.1": _use_summary(1, 1, {"winkelfunctie": 1})},
+    )
+    assert result["is_residential"].iloc[0]
+    assert result["service_building_type"].iloc[0] is None
+
+
+def test_dominant_use_function_wins_over_a_minor_one():
+    """The most-registered function decides the type."""
+    df = _one_building()
+    result = classify_all(
+        df,
+        units_by_pand_id={"NL.IMBAG.Pand.1": 4.0},
+        use_by_pand_id={"NL.IMBAG.Pand.1": _use_summary(
+            0, 4, {"kantoorfunctie": 3, "winkelfunctie": 1})},
+    )
+    assert result["service_building_type"].iloc[0] == "office"
+
+
+def test_unmappable_use_function_is_not_forced_into_a_type():
+    """sportfunctie has no counterpart among occupancy's eight service
+    types, so the building is left unmodeled rather than mis-typed."""
+    df = _one_building()
+    result = classify_all(
+        df,
+        units_by_pand_id={"NL.IMBAG.Pand.1": 1.0},
+        use_by_pand_id={"NL.IMBAG.Pand.1": _use_summary(0, 1, {"sportfunctie": 1})},
+    )
+    assert not result["is_residential"].iloc[0]
+    assert result["service_building_type"].iloc[0] is None
+
+
+def test_classification_without_use_data_is_unchanged():
+    """Omitting the extract leaves the pre-existing two-signal behaviour
+    intact, so a region with no BAG fetch still classifies."""
+    df = _one_building()
+    result = classify_all(df, units_by_pand_id={"NL.IMBAG.Pand.1": 1.0})
+    assert result["is_residential"].iloc[0]
+    assert result["building_type"].iloc[0] == "SFH"
+
+
+def test_derive_service_capacity_scales_with_floor_area():
+    """Capacity tracks real floor area, and reproduces occupancy's own
+    per-type default at that type's reference size."""
+    from buem.config.building_registry import derive_service_capacity
+
+    assert derive_service_capacity("hotel", 2400.0) == 120
+    assert derive_service_capacity("hotel", 52.0) == 3
+    assert derive_service_capacity("office", 600.0) == 40
+    # A type with no published density leaves the choice to occupancy.
+    assert derive_service_capacity("not_a_type", 500.0) is None
+    # Unusable floor area does the same rather than inventing a number.
+    assert derive_service_capacity("hotel", 0.0) is None
+
+
+def test_small_logiesfunctie_is_not_typed_as_a_hotel():
+    """A 60 m2 recreational cabin is not occupancy's staffed-hotel
+    profile, so it is left unmodelled rather than overstated."""
+    df = _one_building(footprint=60.0)
+    result = classify_all(
+        df,
+        units_by_pand_id={"NL.IMBAG.Pand.1": 1.0},
+        use_by_pand_id={"NL.IMBAG.Pand.1": _use_summary(0, 1, {"logiesfunctie": 1})},
+    )
+    assert not result["is_residential"].iloc[0]
+    assert result["service_building_type"].iloc[0] is None
+
+
+def test_large_logiesfunctie_is_still_a_hotel():
+    df = _one_building(footprint=1200.0)
+    result = classify_all(
+        df,
+        units_by_pand_id={"NL.IMBAG.Pand.1": 1.0},
+        use_by_pand_id={"NL.IMBAG.Pand.1": _use_summary(0, 1, {"logiesfunctie": 1})},
+    )
+    assert result["service_building_type"].iloc[0] == "hotel"
+
+
+def test_small_logiesfunctie_falls_through_to_another_registered_use():
+    """The size gate skips the hotel mapping without abandoning a
+    building that also carries a mappable function."""
+    df = _one_building(footprint=60.0)
+    result = classify_all(
+        df,
+        units_by_pand_id={"NL.IMBAG.Pand.1": 2.0},
+        use_by_pand_id={"NL.IMBAG.Pand.1": _use_summary(
+            0, 2, {"logiesfunctie": 2, "winkelfunctie": 1})},
+    )
+    assert result["service_building_type"].iloc[0] == "supermarket"
+
+
+def test_large_pand_with_no_verblijfsobject_is_flagged_ancillary():
+    """A 900 m2 in-use Pand carrying no registered unit is a barn or hall,
+    not a shed -- it must be counted, not silently dropped."""
+    df = _one_building(footprint=900.0)
+    result = classify_all(
+        df,
+        units_by_pand_id={"NL.IMBAG.Pand.1": 0.0},
+        use_by_pand_id={"NL.IMBAG.Pand.2": _use_summary(1, 0, {"woonfunctie": 1})},
+    )
+    assert not result["is_residential"].iloc[0]
+    assert result["service_building_type"].iloc[0] is None
+    assert bool(result["is_ancillary_structure"].iloc[0])
+
+
+def test_small_pand_with_no_verblijfsobject_is_not_ancillary():
+    """Below the threshold the same category is garden sheds and garages,
+    whose demand is negligible."""
+    df = _one_building(footprint=25.0)
+    result = classify_all(
+        df,
+        units_by_pand_id={"NL.IMBAG.Pand.1": 0.0},
+        use_by_pand_id={"NL.IMBAG.Pand.2": _use_summary(1, 0, {"woonfunctie": 1})},
+    )
+    assert not bool(result["is_ancillary_structure"].iloc[0])
+
+
+def test_typed_service_building_is_never_ancillary():
+    """The flag marks buildings with no recorded use at all, so it must
+    not overlap the ones that do get simulated."""
+    df = _one_building(footprint=900.0)
+    result = classify_all(
+        df,
+        units_by_pand_id={"NL.IMBAG.Pand.1": 1.0},
+        use_by_pand_id={"NL.IMBAG.Pand.1": _use_summary(0, 1, {"winkelfunctie": 1})},
+    )
+    assert result["service_building_type"].iloc[0] == "supermarket"
+    assert not bool(result["is_ancillary_structure"].iloc[0])
+
+
+def test_ancillary_flag_is_all_false_without_use_function_data():
+    """The flag means "known to have no registered unit". With no use
+    data supplied that is unknown, not true, so nothing is flagged."""
+    df = _one_building(footprint=900.0)
+    result = classify_all(df, units_by_pand_id={"NL.IMBAG.Pand.1": 0.0})
+    assert not result["is_ancillary_structure"].any()
+

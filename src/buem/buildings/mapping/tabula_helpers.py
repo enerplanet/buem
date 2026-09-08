@@ -30,13 +30,36 @@ import pandas as pd
 
 logger = logging.getLogger(__name__)
 
+# (column, repr(default)) pairs already reported by safe_series_float, so a
+# batch run logs each distinct substitution once instead of once per
+# building. Process-local; workers each report their own.
+_WARNED_DEFAULTS: set[tuple[str, str]] = set()
+
 
 @overload
-def safe_series_float(row: pd.Series, col: str, default: float) -> float: ...
+def safe_series_float(
+    row: pd.Series, col: str, default: float, *, warn: bool = ...,
+) -> float: ...
 @overload
-def safe_series_float(row: pd.Series, col: str, default: None) -> float | None: ...
-def safe_series_float(row: pd.Series, col: str, default: float | None) -> float | None:
+def safe_series_float(
+    row: pd.Series, col: str, default: None, *, warn: bool = ...,
+) -> float | None: ...
+def safe_series_float(
+    row: pd.Series, col: str, default: float | None, *, warn: bool = True,
+) -> float | None:
     """Read a float from a pandas Series, returning *default* on NaN/missing.
+
+    A substituted default is **named in a warning** rather than applied
+    silently. A reference row missing a column is not an error -- TABULA
+    genuinely omits columns for some archetypes, and a hard failure would
+    make those buildings unmappable -- but it does mean the simulation
+    ran on an assumed number, which the operator should be able to see in
+    the log rather than infer from a surprising result.
+
+    Warnings are emitted once per ``(column, default)`` pair per process.
+    A batch run touches this thousands of times, and repeating the same
+    line per building would bury it; one line per distinct substitution
+    reports the same information.
 
     Parameters
     ----------
@@ -46,9 +69,23 @@ def safe_series_float(row: pd.Series, col: str, default: float | None) -> float 
         Column / field name.
     default : float | None
         Value to return when the column is absent, ``None``, or ``NaN``.
+        A ``None`` default means "genuinely optional, absence is the
+        answer" and is never warned about.
+    warn : bool
+        Set ``False`` where a default is a documented modelling
+        convention rather than missing data.
     """
     val = row.get(col)
     if val is None or (isinstance(val, float) and math.isnan(val)):
+        if warn and default is not None:
+            key = (col, repr(default))
+            if key not in _WARNED_DEFAULTS:
+                _WARNED_DEFAULTS.add(key)
+                logger.warning(
+                    "Reference column %r is missing or NaN -- substituting the "
+                    "default %r. Further occurrences of this substitution are "
+                    "not repeated.", col, default,
+                )
         return default
     return float(val)
 

@@ -53,6 +53,7 @@ import logging
 
 import pandas as pd
 
+from buem.buildings.datasources.bag_use_function import PandUseSummary
 from buem.buildings.mapping.nl_building_classifier import classify_all
 from buem.buildings.mapping.tabula_helpers import lookup_tabula_archetype
 
@@ -92,6 +93,13 @@ _STANDARD_REFURBISHMENT_MIN_GAP = 1
 _NZEB_REFURBISHMENT_MIN_GAP = 3
 
 
+_EARLIEST_PLAUSIBLE_YEAR = 1000
+"""Below this, a ``construction_year`` is a placeholder rather than a
+date. BAG's own oldest real Dutch buildings are medieval, so nothing
+genuine falls under it, while 0/-1 sentinels are common in derived
+datasets."""
+
+
 def year_to_construction_class(year: float | None) -> str | None:
     """Real construction year -> TABULA ``NL.0X`` class code, or ``None``
     if no year is available -- picking *any* class without a year would
@@ -104,7 +112,19 @@ def year_to_construction_class(year: float | None) -> str | None:
     """
     if year is None or pd.isna(year):
         return None
-    year = int(year)
+    try:
+        year = int(year)
+    except (TypeError, ValueError):
+        # An empty string or other unparseable value is missing data, not
+        # a year -- treat it the same as None rather than raising out of
+        # a whole-region classification run.
+        return None
+    if year < _EARLIEST_PLAUSIBLE_YEAR:
+        # Guards the sentinel case: a 0 (or similar placeholder) would
+        # otherwise pass straight through the boundary walk and come back
+        # as the oldest, most-uninsulated class, which is a silent
+        # fabrication rather than a missing value.
+        return None
     for boundary, code in _YEAR_CLASS_BOUNDARIES:
         if year < boundary:
             return f"NL.{code}"
@@ -278,6 +298,7 @@ def map_buildings(
     buildings_df: pd.DataFrame,
     nl_tabula_df: pd.DataFrame,
     rivm_labels_df: pd.DataFrame,
+    use_by_pand_id: dict[str, PandUseSummary] | None = None,
 ) -> pd.DataFrame:
     """Full Netherlands archetype-linking pipeline.
 
@@ -293,6 +314,12 @@ def map_buildings(
     rivm_labels_df : pd.DataFrame
         Output of ``rivm_energy_labels.load_labels_for_buildings`` --
         ``bag_pand_id``/``aant_verblijfsobj``/``dominant_label``.
+    use_by_pand_id : dict of str to PandUseSummary, optional
+        Output of ``bag_use_function.summarize_use_by_pand`` -- each
+        building's registered BAG use functions. Without it, buildings
+        whose real use is non-residential cannot be told apart from
+        dwellings and are classified as houses; see
+        :func:`nl_building_classifier.classify_all`.
 
     Returns
     -------
@@ -315,7 +342,7 @@ def map_buildings(
     units_by_pand_id = dict(zip(rivm_labels_df["bag_pand_id"], rivm_labels_df["aant_verblijfsobj"], strict=False))
     labels_by_pand_id = dict(zip(rivm_labels_df["bag_pand_id"], rivm_labels_df["dominant_label"], strict=False))
 
-    classified = classify_all(buildings_df, units_by_pand_id)
+    classified = classify_all(buildings_df, units_by_pand_id, use_by_pand_id)
 
     # Real dwelling-unit count, carried through as its own column (not
     # just consumed internally by classify_all): an MFH/AB
@@ -338,9 +365,19 @@ def map_buildings(
     tabula_codes: list[str | None] = []
 
     n_matched = 0
+    n_missing_year = 0
     for _, row in classified.iterrows():
         if not row["is_residential"]:
-            year_classes.append(None)
+            # No TABULA match -- that typology is residential-only -- but
+            # the construction era still applies, and the service-building
+            # reference table is keyed on it. Leaving it null sends every
+            # service building to `_lookup_service_reference`'s
+            # oldest-era fallback, so a hall built in 2020 would be
+            # modelled with pre-1964 envelope U-values.
+            non_residential_class = year_to_construction_class(row.get("construction_year"))
+            if non_residential_class is None:
+                n_missing_year += 1
+            year_classes.append(non_residential_class)
             matched_via_label.append(False)
             refurbishment_variants.append(1)
             tabula_ids.append(None)
@@ -353,6 +390,7 @@ def map_buildings(
         if year_class is None:
             # No construction year: the label-implied class is the only
             # signal left; use it as the era with the as-built variant.
+            n_missing_year += 1
             year_class = label_class
             variant = 1
         else:
@@ -387,6 +425,23 @@ def map_buildings(
     result["refurbishment_variant"] = refurbishment_variants
     result["tabula_variant_code_id"] = tabula_ids
     result["tabula_variant_code"] = tabula_codes
+
+    if n_missing_year:
+        # The construction year drives the era for both paths -- the TABULA
+        # archetype for a dwelling, the service-building reference row for
+        # everything else -- and each path falls back silently when it is
+        # absent (to the energy label, and to the oldest era respectively).
+        # A region where this fires for more than a handful of buildings
+        # has a source-data problem worth fixing upstream, not a modelling
+        # result worth trusting, so it is reported rather than swallowed.
+        logger.warning(
+            "map_buildings: %d/%d buildings have no usable construction_year -- "
+            "their construction era is inferred from an energy label where one "
+            "exists (residential) or falls back to the oldest reference era "
+            "(non-residential). Check the CityJSON source's "
+            "oorspronkelijkbouwjaar attribute for these.",
+            n_missing_year, len(classified),
+        )
 
     n_residential = int(result["is_residential"].sum())
     logger.info(

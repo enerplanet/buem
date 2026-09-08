@@ -283,16 +283,24 @@ def test_summarize_weather_ghi_pairwise_diff_no_nan_across_index_offsets():
 @requires_bundled_workbook
 def test_provider_comparison_end_to_end_building_52203_merra2():
     """Regression guard on the end-to-end figure for building 52203 with
-    the merra-2 provider: 41,816.4 kWh.
+    the merra-2 provider: 42,411.9 kWh.
 
     This value tracks buem's modeling assumptions and moves when they
-    change deliberately -- most recently when the comfort dead-band
-    became buem's own 18-21 degC default (representing observed occupant
-    behavior rather than TABULA's standardized 20 degC calculation
-    setpoint), and when window area became a fraction of each wall's own
-    area rather than TABULA's per-direction window columns. Its purpose
-    is to catch *unintended* drift in the analysis pipeline, so update it
-    only alongside a deliberate modeling change."""
+    change deliberately. Most recently, two occupancy-related changes in
+    opposite directions: occupancy v6.0.0 made household appliance use
+    scale with occupant count, raising a multi-occupant dwelling's
+    internal gain and lowering heating about 1%; then num_persons stopped
+    defaulting to a flat 4 and began resolving a real per-building-type
+    figure (this is an MFH, so 1.54 occupants for the Netherlands rather
+    than 4), which removed more internal gain than v6.0.0 added and
+    raised heating about 2.5% net. Before those, when the comfort
+    dead-band became buem's own 18-21 degC default (representing observed
+    occupant behavior rather than TABULA's standardized 20 degC
+    calculation setpoint), and when window area became a fraction of each
+    wall's own area rather than TABULA's per-direction window columns.
+
+    Its purpose is to catch *unintended* drift in the analysis pipeline,
+    so update it only alongside a deliberate modeling change."""
     from buem.analysis.provider_comparison import run_building_across_providers
     from buem.analysis.weather_providers import extract_provider_weather
     from buem.buildings.datasources.excel_source import ExcelBuildingSource
@@ -310,7 +318,7 @@ def test_provider_comparison_end_to_end_building_52203_merra2():
 
     assert set(results) == {"merra-2"}
     r = results["merra-2"]
-    assert float(r.heating_kW.sum()) == pytest.approx(41816.4, rel=0.01)
+    assert float(r.heating_kW.sum()) == pytest.approx(42411.9, rel=0.01)
     assert len(r.heating_kW) == 8760
 
 
@@ -338,7 +346,7 @@ def test_batch_run_building_52203_merra2_writes_ok_row(tmp_path):
     # Same regression guard as
     # test_provider_comparison_end_to_end_building_52203_merra2 -- see
     # its docstring for when this value legitimately changes.
-    assert row["heating_kWh"] == pytest.approx(41816.4, rel=0.01)
+    assert row["heating_kWh"] == pytest.approx(42411.9, rel=0.01)
 
 
 @requires_bundled_workbook

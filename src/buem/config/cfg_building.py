@@ -15,6 +15,7 @@ from buem.buildings.mapping.live_synthesis import (
 from buem.config.attribute_types import AttributeCategory, AttributeSpec, AttrType
 from buem.config.cfg_attribute import ATTRIBUTE_SPECS
 from buem.config.cfg_attribute import cfg as DEFAULT_CFG
+from buem.config.setback import apply_setback
 
 logger = logging.getLogger(__name__)
 
@@ -351,6 +352,14 @@ class CfgBuilding:
         # rejected). See live_synthesis.normalize_opening_azimuths.
         comps = normalize_opening_azimuths(comps)
         cfg["components"] = comps
+
+        # ISO 13790 section 13 intermittency: turn the scalar heating
+        # setpoint into an hourly schedule when a setback profile is named.
+        # No-op otherwise, which is the default -- see buem.config.setback
+        # for why this is opt-in. Applied here for the same reason opening
+        # synthesis is: this is the one point both the live API path and the
+        # config-only path converge on.
+        cfg = apply_setback(cfg)
 
         # compute aggregated A_ref if absent
         if "A_ref" not in cfg:

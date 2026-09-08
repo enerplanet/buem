@@ -1,0 +1,49 @@
+# Dutch as-built envelope reference: U-values by TABULA construction-year
+# class and building type, before any refurbishment measure is applied.
+#
+# Shared across every Dutch region. A region whose stock genuinely differs
+# may still ship its own u_value_reference.csv beside its building data,
+# which takes precedence; an explicit --u-value-overrides path beats both.
+# Resolved by buem.config.reference_values.resolve_envelope_reference().
+#
+# U_Window names a class from glazing_reference.csv rather than carrying a
+# number, so the window U- and g-values stay consistent with each other.
+# A bare number is still accepted.
+#
+# CAVEAT, and it is a large one: these describe a building as originally
+# constructed and never improved. Validation against CBS found buildings
+# modelled this way run about 4x measured consumption, while the same
+# model with refurbishment applied lands within 1% -- see
+# docs/source/validation/envelope_and_refurbishment.rst. Most Dutch stock
+# of these eras has had at least roof insulation and replacement glazing.
+# Treat the two oldest classes in particular as an unimproved bound, not
+# as a central estimate, and expect a real region to need refurbishment
+# state supplied alongside.
+#
+# Hand-editing is supported and expected; update source_archetype if a row
+# no longer reflects the archetype it names.
+construction_year_class,year_range,building_type,U_Wall,U_Roof,U_Floor,U_Window,U_Door,source_archetype
+NL.01,<=1964,SFH,2.778,2.564,3.125,single,3.50,NL.N.SFH.01.Gen.ReEx.001.001
+NL.01,<=1964,TH,5.263,4.545,6.667,single,3.50,NL.N.TH.01.Gen.ReEx.001.001
+NL.01,<=1964,MFH,2.778,2.564,3.125,single,3.50,NL.N.MFH.01.Gen.ReEx.001.001
+NL.01,<=1964,AB,2.778,2.564,3.125,single,3.50,NL.N.AB.01.Gen.ReEx.001.001
+NL.02,1965-1974,SFH,2.326,1.163,5.882,single,3.50,NL.N.SFH.02.Gen.ReEx.001.001
+NL.02,1965-1974,TH,2.326,1.163,5.882,single,3.50,NL.N.TH.02.Gen.ReEx.001.001
+NL.02,1965-1974,MFH,2.326,1.163,5.882,single,3.50,NL.N.MFH.02.Gen.ReEx.001.001
+NL.02,1965-1974,AB,2.326,1.163,5.882,single,3.50,NL.N.AB.02.Gen.ReEx.001.001
+NL.03,1975-1991,SFH,0.769,0.769,0.769,double_uncoated,3.50,NL.N.SFH.03.Gen.ReEx.001.001
+NL.03,1975-1991,TH,0.769,0.769,1.923,double_uncoated,3.50,NL.N.TH.03.Gen.ReEx.001.001
+NL.03,1975-1991,MFH,0.769,0.769,1.923,double_uncoated,3.50,NL.N.MFH.03.Gen.ReEx.001.001
+NL.03,1975-1991,AB,0.769,0.769,0.769,double_uncoated,3.50,NL.N.AB.03.Gen.ReEx.001.001
+NL.04,1992-2005,SFH,0.395,0.395,0.395,HR,3.50,NL.N.SFH.04.Gen.ReEx.001.001
+NL.04,1992-2005,TH,0.395,0.395,0.395,HR,3.50,NL.N.TH.04.Gen.ReEx.001.001
+NL.04,1992-2005,MFH,0.395,0.395,0.395,HR,3.50,NL.N.MFH.04.Gen.ReEx.001.001
+NL.04,1992-2005,AB,0.395,0.395,0.395,HR,2.00,NL.N.AB.04.Gen.ReEx.001.001
+NL.05,2006-2014,SFH,0.286,0.250,0.286,HR_plus_plus,1.65,NL.N.SFH.05.Gen.ReEx.001.001
+NL.05,2006-2014,TH,0.286,0.250,0.286,HR_plus_plus,1.65,NL.N.TH.05.Gen.ReEx.001.001
+NL.05,2006-2014,MFH,0.286,0.250,0.286,HR_plus_plus,1.65,NL.N.MFH.05.Gen.ReEx.001.001
+NL.05,2006-2014,AB,0.286,0.250,0.286,HR_plus_plus,1.65,NL.N.AB.05.Gen.ReEx.001.001
+NL.06,2015-present,SFH,0.222,0.167,0.286,HR_plus_plus,1.65,NL.N.SFH.06.Gen.ReEx.001.001
+NL.06,2015-present,TH,0.222,0.167,0.286,HR_plus_plus,1.65,NL.N.TH.06.Gen.ReEx.001.001
+NL.06,2015-present,MFH,0.222,0.167,0.286,HR_plus_plus,1.65,NL.N.MFH.06.Gen.ReEx.001.001
+NL.06,2015-present,AB,0.222,0.167,0.286,HR_plus_plus,1.65,NL.N.AB.06.Gen.ReEx.001.001

@@ -322,3 +322,60 @@ def test_repair_dwelling_counts_recomputes_from_the_registered_value():
     })
     out = repair_dwelling_counts(already_repaired)
     assert out.loc[0, "residential_units"] == 214.0
+
+
+def test_non_residential_buildings_keep_their_construction_era():
+    """A service building gets no TABULA archetype -- that typology is
+    residential-only -- but its construction era still drives the
+    service-building reference lookup, so it must survive."""
+    buildings = _synthetic_buildings().copy()
+    # Mark every synthetic building non-residential via the RIVM signal
+    # (a matched Pand with zero registered dwelling units).
+    rivm = pd.DataFrame({
+        "bag_pand_id": buildings["bag_pand_id"],
+        "aant_verblijfsobj": [0.0] * len(buildings),
+        "dominant_label": [None] * len(buildings),
+    })
+    result = map_buildings(buildings, _nl_tabula, rivm)
+
+    assert not result["is_residential"].any()
+    assert result["tabula_variant_code_id"].isna().all()
+    # The era is derived from each building's own construction_year.
+    known_year = result[result["construction_year"].notna()]
+    assert len(known_year) > 0
+    assert known_year["construction_year_class"].notna().all()
+    assert known_year["construction_year_class"].str.startswith("NL.").all()
+
+
+def test_year_to_construction_class_rejects_placeholders_not_just_nulls():
+    """A 0/-1 sentinel or unparseable cell is missing data. Passing it
+    through would return the oldest, most-uninsulated class -- a silent
+    fabrication that reads exactly like a real medieval building."""
+    from buem.buildings.datasources.nl_archetype_mapper import year_to_construction_class
+
+    for placeholder in (None, float("nan"), 0, -1, "", "abc"):
+        assert year_to_construction_class(placeholder) is None, placeholder
+    # Genuinely old buildings still classify -- Loenen's oldest is 1550.
+    assert year_to_construction_class(1550) == "NL.01"
+    assert year_to_construction_class(2024) == "NL.06"
+
+
+def test_construction_year_survives_classification_for_every_building():
+    """The construction year arrives from 3D BAG keyed to the Pand id and
+    must still be attached to the same building afterwards -- the era is
+    derived from it for both the residential and service paths."""
+    buildings = _synthetic_buildings().copy()
+    rivm = pd.DataFrame({
+        "bag_pand_id": buildings["bag_pand_id"],
+        "aant_verblijfsobj": [1.0] * len(buildings),
+        "dominant_label": [None] * len(buildings),
+    })
+    result = map_buildings(buildings, _nl_tabula, rivm)
+
+    assert len(result) == len(buildings)
+    before = dict(zip(buildings["bag_pand_id"], buildings["construction_year"], strict=True))
+    after = dict(zip(result["bag_pand_id"], result["construction_year"], strict=True))
+    assert before.keys() == after.keys()
+    for pand_id, year in before.items():
+        assert after[pand_id] == year or (pd.isna(after[pand_id]) and pd.isna(year))
+

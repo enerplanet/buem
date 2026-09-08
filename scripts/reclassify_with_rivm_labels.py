@@ -32,8 +32,14 @@ from pathlib import Path
 
 import pandas as pd
 
+from buem.buildings.datasources.bag_use_function import (
+    load_use_functions,
+    summarize_use_by_pand,
+)
 from buem.buildings.datasources.nl_archetype_mapper import map_buildings, repair_dwelling_counts
 from buem.buildings.datasources.rivm_energy_labels import load_labels_for_buildings
+
+BAG_USE_FUNCTION_FILENAME = "bag_use_function.csv"
 
 logger = logging.getLogger(__name__)
 
@@ -79,6 +85,22 @@ def main(argv: list[str] | None = None) -> int:
     bag_pand_ids = before["bag_pand_id"].dropna().unique().tolist()
     rivm_labels = load_labels_for_buildings(gpkg_path, bag_pand_ids)
 
+    # BAG use functions, when the region's extract has been fetched.
+    # Without them non-residential buildings are indistinguishable from
+    # dwellings (see nl_building_classifier.classify_all), so a missing
+    # extract is worth an explicit warning rather than silent omission.
+    use_path = data_dir / BAG_USE_FUNCTION_FILENAME
+    use_by_pand_id = None
+    if use_path.exists():
+        use_by_pand_id = summarize_use_by_pand(load_use_functions(use_path))
+    else:
+        print(
+            f"WARNING: {use_path} not found -- every non-residential building "
+            "will be classified as a dwelling. Run "
+            f"scripts/fetch_bag_use_functions.py {data_dir} first.",
+            file=sys.stderr,
+        )
+
     before_type_counts = before["building_type"].value_counts(dropna=False)
     before_variant_counts = (
         before["refurbishment_variant"].value_counts(dropna=False)
@@ -86,7 +108,7 @@ def main(argv: list[str] | None = None) -> int:
         else None
     )
 
-    classified = map_buildings(before, nl_tabula, rivm_labels)
+    classified = map_buildings(before, nl_tabula, rivm_labels, use_by_pand_id)
     after = repair_dwelling_counts(classified)
 
     after.to_csv(buildings_path, index=False)
@@ -95,6 +117,10 @@ def main(argv: list[str] | None = None) -> int:
     print(f"  buildings:                 {len(after)}")
     print(f"  RIVM GeoPackage matches:   {len(rivm_labels)}/{len(bag_pand_ids)}")
     print(f"  real label matches:       {int(rivm_labels['dominant_label'].notna().sum())}")
+    if use_by_pand_id is not None:
+        n_service = int(after["service_building_type"].notna().sum())
+        print(f"  BAG use-function matches:  {len(use_by_pand_id)}/{len(bag_pand_ids)}")
+        print(f"  service buildings:         {n_service}")
     print()
     print("  building_type, before -> after:")
     after_type_counts = after["building_type"].value_counts(dropna=False)

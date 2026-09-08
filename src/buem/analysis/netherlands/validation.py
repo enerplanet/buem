@@ -70,6 +70,7 @@ from buem.buildings.datasources.csv_source import CsvBuildingSource
 from buem.buildings.mapping.lod2_mapper import LOD2Mapper
 from buem.config.building_registry import DEFAULT_WEATHER_PROVIDER, DEFAULT_YEAR
 from buem.config.cfg_building import CfgBuilding
+from buem.config.reference_values import resolve_envelope_reference
 
 logger = logging.getLogger(__name__)
 
@@ -590,10 +591,9 @@ def run_validation(
         at least one successfully-simulated building.
     """
     source = CsvBuildingSource(data_dir)
-    overrides_path = Path(u_value_overrides_path) if u_value_overrides_path else Path(data_dir) / "u_value_reference.csv"
-    u_value_overrides = pd.read_csv(overrides_path) if overrides_path.exists() else None
-    if u_value_overrides is None:
-        logger.warning("No u_value_reference.csv found at %s -- LOD2Mapper will use raw TABULA U-values.", overrides_path)
+    u_value_overrides = resolve_envelope_reference(
+        u_value_overrides_path, data_dir, country="NL",
+    )
 
     # Optional per-region tables, loaded on the same "absent is normal"
     # basis batch.py uses -- so a validation run and a batch run of the
@@ -644,6 +644,7 @@ def run_validation(
 
             energy = _simulate_energy_kwh(
                 building, weather_df, use_milp=use_milp, residential_units=units_value,
+                region_code=region_code,
             )
             if energy is not None:
                 heating_values.append(energy["heating_kwh"] / units_value)
@@ -664,7 +665,7 @@ def run_validation(
 
 def _simulate_energy_kwh(
     building: Building, weather_df: pd.DataFrame, *, use_milp: bool,
-    residential_units: float = 1.0,
+    residential_units: float = 1.0, region_code: str | None = None,
 ) -> dict[str, float] | None:
     """Run one building through the same real
     AttributeBuilder/CfgBuilding/ModelBUEM path ``batch.py``/
@@ -690,6 +691,11 @@ def _simulate_energy_kwh(
         attrs["weather"] = weather_df
         attrs["use_provided_weather"] = True
         attrs["residential_units"] = residential_units
+        # Lets AttributeBuilder pick this municipality's own occupants-per-
+        # dwelling figures over the national ones, which differ materially
+        # for apartments. Same CBS RegioS code the comparison itself uses,
+        # so the simulated and reference sides describe one region.
+        attrs["region_code"] = region_code
         merged = AttributeBuilder(payload_attrs=attrs).build()
         cfg = CfgBuilding(merged).to_cfg_dict()
         model = ModelBUEM(cfg)

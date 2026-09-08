@@ -1,0 +1,33 @@
+# Heating setpoint setback profiles -- ISO 13790 section 13 intermittency.
+#
+# Selected per building by the `setback_profile` attribute. Loaded by
+# buem.config.reference_values.load_setback_profiles(); applied by
+# buem.config.setback.apply_setback().
+#
+# OFF BY DEFAULT, deliberately. buem's own comfort band already sits at
+# 18-21 degC rather than TABULA's standardized 20-24 degC calculation
+# setpoint, and that lower bound was chosen to represent *observed*
+# occupant behaviour -- a change worth about 17% on its own. Much of what
+# a setback profile represents is therefore already priced into the
+# default band, and stacking one on top double-counts the same behaviour.
+# These profiles exist for scenario work ("what would this stock do under
+# night setback?"), not to be switched on for validation runs.
+#
+# How a profile is applied, per timestep:
+#
+#     reduction = away_setback_k * occ_nothome + asleep_setback_k * occ_sleeping
+#     comfortT_lb = max(base_lb - min(reduction, max_setback_k), min_setpoint_c)
+#
+# occ_nothome and occ_sleeping are *fractions* of occupants, not flags, so
+# the reduction scales smoothly with how much of the household is away or
+# asleep rather than switching on a threshold. max_setback_k caps the two
+# terms combined; min_setpoint_c is an absolute floor below which the
+# dwelling is not allowed to drift regardless.
+#
+# Hand-editing is supported and expected. Add a row rather than editing an
+# existing one if you want to compare scenarios.
+profile_name,away_setback_k,asleep_setback_k,max_setback_k,min_setpoint_c,description,source
+none,0.0,0.0,0.0,15.0,No setback -- constant setpoint,"Explicit no-op, so the default behaviour is visible in this table rather than implied by absence."
+night_only,0.0,3.0,3.0,15.0,Night setback only; constant setpoint while away,"The commonest Dutch pattern -- a programmable thermostat lowering overnight while daytime setpoint is held."
+night_and_away,3.0,3.0,4.0,15.0,Setback overnight and when the dwelling is empty,"Both periods set back, as a thermostat with an occupancy or away schedule would."
+deep,5.0,4.0,6.0,15.0,Aggressive setback overnight and when away,"Upper bound on plausible behaviour, for sensitivity testing rather than as a description of typical practice."

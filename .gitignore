@@ -21,6 +21,14 @@ coverage.xml
 # Small, human-editable reference tables -- the *inputs* that change what
 # buem simulates, as opposed to the multi-MB extracted building tables the
 # blanket *.csv rule above is aimed at. These must ship.
+#
+# Everything under data/reference/ is such a table by construction: that
+# directory holds only the editable inputs a reviewer is expected to read
+# and change. Whitelisting the directory rather than each file stops a new
+# table being silently swallowed by the *.csv rule -- which is exactly
+# what happened to the occupancy, glazing, envelope and setback tables
+# when they were added.
+!src/buem/data/reference/*.csv
 !src/buem/data/buildings/netherlands/Loenen/u_value_reference.csv
 !src/buem/data/buildings/netherlands/Loenen/service_building_reference.csv
 !src/buem/data/buildings/netherlands/Loenen/refurbishment_measure_reference.csv

@@ -139,6 +139,77 @@ def dhw_energy_kwh(
     return kwh.rename("dhw_kWh")
 
 
+DHW_COLD_MAINS_T_C = _CONSTANTS["DHW_COLD_MAINS_T_C"]
+"""Cold-mains inlet temperature, degC -- the reference every per-fixture
+delivery temperature is differenced against."""
+
+DHW_DELIVERY_T_BY_FIXTURE: dict[str, float] = {
+    "basin": _CONSTANTS["DHW_DELIVERY_T_BASIN_C"],
+    "kitchen_sink": _CONSTANTS["DHW_DELIVERY_T_KITCHEN_SINK_C"],
+    "shower": _CONSTANTS["DHW_DELIVERY_T_SHOWER_C"],
+    "bath": _CONSTANTS["DHW_DELIVERY_T_BATH_C"],
+}
+"""Delivery temperature per fixture, degC, keyed by the suffix of
+``occupancy.generate_dhw_draws()``'s own ``dhw_liters_<fixture>``
+columns.
+
+occupancy resolves its draws per fixture, and each is delivered at its
+own temperature -- a kitchen sink runs far hotter than a wash basin.
+Applying one blended figure to the summed total therefore misprices every
+draw except the one it happens to match. See :func:`dhw_energy_kwh_by_fixture`.
+"""
+
+
+def dhw_energy_kwh_by_fixture(
+    draws: pd.DataFrame,
+    *,
+    cold_mains_t_c: float = DHW_COLD_MAINS_T_C,
+    delivery_t_by_fixture: dict[str, float] | None = None,
+) -> pd.Series:
+    """Convert occupancy's per-fixture DHW draw volumes into hourly energy,
+    pricing each fixture at its own delivery temperature.
+
+    ``occupancy.generate_dhw_draws()`` returns ``dhw_liters_basin``,
+    ``dhw_liters_kitchen_sink``, ``dhw_liters_shower``,
+    ``dhw_liters_bath`` and ``dhw_liters_total``. Using only the total, as
+    :func:`dhw_energy_kwh` does, forces one blended temperature rise onto
+    draws that genuinely differ -- overstating basin and shower energy
+    against a kitchen-sink-weighted figure, understating it against a
+    shower-weighted one.
+
+    Falls back to the blended calculation on ``dhw_liters_total`` when no
+    per-fixture column is present, so a caller holding only a total series
+    still gets an answer.
+
+    Returns an hourly kWh series named ``"dhw_kWh"``.
+    """
+    temperatures = delivery_t_by_fixture or DHW_DELIVERY_T_BY_FIXTURE
+    joules_per_liter_per_k = WATER_DENSITY_KG_PER_L * WATER_SPECIFIC_HEAT_KJ_PER_KGK * 1000.0
+
+    total: pd.Series | None = None
+    for fixture, delivery_t in temperatures.items():
+        column = f"dhw_liters_{fixture}"
+        if column not in draws:
+            continue
+        delta_t = delivery_t - cold_mains_t_c
+        if delta_t <= 0:
+            raise ValueError(
+                f"Delivery temperature for {fixture!r} ({delivery_t} degC) is not "
+                f"above the cold-mains temperature ({cold_mains_t_c} degC)."
+            )
+        energy = draws[column] * joules_per_liter_per_k * delta_t / 3_600_000.0
+        total = energy if total is None else total + energy
+
+    if total is None:
+        if "dhw_liters_total" not in draws:
+            raise ValueError(
+                "draws carries neither per-fixture dhw_liters_<fixture> columns "
+                f"nor dhw_liters_total (found: {list(draws.columns)})."
+            )
+        return dhw_energy_kwh(draws["dhw_liters_total"])
+    return total.rename("dhw_kWh")
+
+
 def dhw_energy_kwh_annual_fallback(
     num_persons: float,
     *,
@@ -189,22 +260,64 @@ isn't broken out anywhere used here. Feeds
 :func:`cooking_annual_kwh_from_heating` below."""
 
 
+COOKING_HEAT_GAIN_FRACTION = _CONSTANTS["COOKING_HEAT_GAIN_FRACTION"]
+"""Share of cooking energy input that becomes internal heat gain in the
+dwelling.
+
+Cooking has two distinct energy roles, and buem models them separately.
+The *input* is fuel or electricity consumed by the hob, oven and other
+kitchen appliances, and appears on the bill under whichever carrier
+supplies it. The *gain* is the part of that input which the food does not
+absorb and which reaches the zone as sensible or latent heat -- cooking
+is strongly exothermic and cannot capture its own heat. The two are not
+equal: an extraction hood removes part of the heat, and energy stored in
+the food leaves the balance when it is eaten or cools elsewhere.
+
+Applies to both carriers. A gas hob's combustion heat enters the room
+exactly as an electric hob's does, even though only the electric one
+registers on the electricity meter -- see
+``AttributeBuilder.generate_electricity_profile()``.
+"""
+
+DHW_HEAT_RECOVERY_FRACTION = _CONSTANTS["DHW_HEAT_RECOVERY_FRACTION"]
+"""Share of DHW energy recovered into the dwelling as internal gain
+rather than leaving down the drain -- hot water standing in a sink or
+bath gives up part of its heat to the room.
+
+Default 0.0: the mechanism is real but small, and its size depends on how
+long water stands before draining and on whether drain-water heat
+recovery is fitted. Parameterised so it can be explored rather than
+assumed."""
+
+COOKING_ANNUAL_KWH_PER_HOUSEHOLD = _CONSTANTS["COOKING_ANNUAL_KWH_PER_HOUSEHOLD"]
+"""Useful cooking energy for one household-year (kWh), the default
+magnitude :func:`cooking_gas_energy_kwh` distributes across occupancy's
+own ``cooking_active`` hours. A regional figure -- see the constants CSV
+for its derivation and for why a stock with different gas-versus-electric
+hob prevalence should override it."""
+
+
 def cooking_annual_kwh_from_heating(
     heating_kwh_annual: float,
     *,
     cooking_share: float = COOKING_SHARE_OF_GAS,
     space_heating_share: float = SPACE_HEATING_SHARE_OF_GAS,
 ) -> float:
-    """Derive a per-building annual gas-cooking energy total (kWh) by
-    applying CBS's national cooking:heating ratio to *this building's own*
-    simulated ``heating_kWh``, rather than assuming one fixed constant
-    across every building regardless of size or climate.
+    """Derive an annual gas-cooking energy total (kWh) by applying a
+    national cooking:heating gas ratio to *this building's own* simulated
+    ``heating_kWh``.
 
-    This is a documented proxy, not a physical gas-hob model -- see
-    :func:`cooking_gas_energy_kwh`'s docstring for the assumption it
-    represents (real per-building *timing* from occupancy's
-    ``cooking_active`` signal, magnitude anchored to CBS's blended
-    national ratio, not a per-burner power calculation).
+    **Not the default**, and deliberately so: anchoring cooking to
+    simulated heating makes the cooking figure inherit whatever error the
+    heating figure carries, so a building whose heating is overestimated
+    reports proportionally overestimated cooking, and the two errors can
+    never be told apart in a comparison against measured gas. Prefer
+    :data:`COOKING_ANNUAL_KWH_PER_HOUSEHOLD`, which is independent of the
+    solve.
+
+    Retained for reproducing results computed under the earlier
+    convention, and for the case where a caller genuinely wants cooking
+    expressed as a share of that building's own modelled gas use.
     """
     if heating_kwh_annual < 0:
         raise ValueError(
@@ -267,11 +380,14 @@ def cooking_gas_energy_kwh(
 
 
 __all__ = [
+    "COOKING_ANNUAL_KWH_PER_HOUSEHOLD",
+    "COOKING_HEAT_GAIN_FRACTION",
     "COOKING_SHARE_OF_GAS",
     "DHW_ANNUAL_KWH_PER_PERSON_EN12831_3",
     "DHW_ANNUAL_KWH_PER_PERSON_NTA8800",
     "DHW_DELTA_T_K",
     "DHW_DELTA_T_K_REFERENCE",
+    "DHW_HEAT_RECOVERY_FRACTION",
     "DHW_LITERS_PER_PERSON_DAY_EN12831_3",
     "DHW_SHARE_OF_GAS",
     "SPACE_HEATING_SHARE_OF_GAS",

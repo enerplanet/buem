@@ -140,6 +140,90 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   is unaffected; this only removes the per-request, location-specific
   lookup the payload path now replaces. See #10.
 
+## [6.0.0] - 2026-09-01
+
+Major bump: every simulated figure changes. Household occupancy is no
+longer a flat 4 persons, cooking energy comes from occupancy's appliance
+model rather than from simulated heating, domestic hot water is priced
+per fixture, and glazing is resolved by product class per construction
+era. Any previously-published figure should be regenerated.
+
+The headline validation finding is that buem's heating overshoot is
+largely a **refurbishment-state data gap, not a model defect**: buildings
+modelled with a refurbished envelope reproduce CBS to within 1%, while
+those modelled as-built run about 4x, and 46% of the Loenen stock carries
+no energy label and is therefore forced to as-built. See
+`docs/source/validation/envelope_and_refurbishment.rst`.
+
+### Added
+
+- **Occupancy per building type, sourced from CBS.**
+  `buem.analysis.netherlands.cbs_household_size` derives mean occupants
+  per dwelling from CBS 85035NED + 86064NED + 85140NED, resolving the
+  dwelling-type axis that no single published table provides. Values live
+  in the editable `data/reference/num_persons_by_building_type.csv` and
+  resolve most-specific-first: `(country, region, type)` ->
+  `(country, *, type)` -> `(*, *, type)` -> `DEFAULT_NUM_PERSONS`.
+  Regenerate the Dutch rows with `scripts/refresh_nl_num_persons.py`.
+- **Fractional household sizes are preserved, not rounded.** A per-type
+  figure is a population mean, so `AttributeBuilder` generates the two
+  bracketing integer household sizes and blends `Q_ig`/`elecLoad`/
+  `dhw_liters`. Rounding would have quantised the whole table onto a
+  handful of integers.
+- **Glazing reference table** (`data/reference/glazing_reference.csv`):
+  single / double_uncoated / HR / HR+ / HR++ / HR+++ with matched U- and
+  g-values. An envelope table's `U_Window` may name a class instead of a
+  number, keeping conduction and solar transmittance consistent.
+- **Era-resolved CBS reference.**
+  `buem.analysis.netherlands.cbs_era_reference` queries table 85140NED,
+  which resolves construction era as well as dwelling type -- the axis
+  buem's own archetypes are keyed on.
+- **ISO 13790 section 13 intermittency**, opt-in and off by default.
+  `buem.config.setback` builds an hourly `comfortT_lb` from
+  `occ_nothome`/`occ_sleeping` and a named profile in
+  `data/reference/setback_profiles.csv`. Off by default because buem's
+  18-21 degC band already represents observed behaviour.
+- **`cooking_carrier`** (`electric`/`gas`/`none`) and **`include_dhw`**
+  flags; **`region_code`** attribute, threaded through `batch.py`
+  (`--region-code`) and `validation.py`.
+- New scripts: `compare_era_type_vs_cbs.py`,
+  `validate_household_size.py`, `refresh_nl_num_persons.py`.
+
+### Changed
+
+- **`num_persons` defaults to a real per-type figure** rather than a flat
+  4 -- roughly 1.6x too high for houses and 3x for apartments against CBS.
+  An explicit caller value still wins.
+- **Cooking energy comes from occupancy's own appliance model.** A
+  kitchen-only generation gives both timing and magnitude from the
+  household's own stochastic draws. Previously it was derived from the
+  building's simulated *heating*, which made it inherit any heating
+  error. Cooking is now also split into the carrier that pays for it and
+  the share that becomes internal gain (`COOKING_HEAT_GAIN_FRACTION`),
+  rather than crediting a hob's entire input as room heat.
+- **DHW is priced per fixture.** occupancy resolves basin, kitchen-sink,
+  shower and bath draws separately and each is delivered at its own
+  temperature; buem previously applied one blended delta-T to the total.
+- **Envelope reference consolidated** into
+  `data/reference/nl_envelope_reference.csv`. The duplicated per-region
+  `u_value_reference.csv` copies are removed;
+  `resolve_envelope_reference()` still honours a region-local file or an
+  explicit path first.
+- **Substituted defaults are now named in a warning** rather than applied
+  silently (`safe_series_float`, the service-reference reader),
+  deduplicated per `(column, default)` per process. Genuine ISO 13790
+  conventions are marked as intentional so real gaps stand out.
+- Regression guard for building 52203 (merra-2): 41,816.4 -> 42,411.9 kWh.
+
+### Fixed
+
+- Two defects in the Dutch as-built envelope table: pre-1964 terraced
+  houses used solid-wall values where the same era's other types used
+  uninsulated-cavity ones, and the 1965-1974 floor R_c was *worse* than
+  the pre-1964 one.
+- `occupancy` upgraded to 6.0.0, whose occupant-scaled appliance use
+  lowers modelled heating by about 1%.
+
 ## [5.0.0] - 2026-08-21
 
 Major bump: every previously-published Netherlands CBS validation figure
