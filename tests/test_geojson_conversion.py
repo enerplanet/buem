@@ -174,6 +174,29 @@ def test_cooking_carrier_omitted_leaves_default_to_attribute_builder():
     assert "include_dhw" not in attrs
 
 
+# ── region_code/setback_profile forwarding ───────────────────────────────
+#
+# Both are real ATTRIBUTE_SPECS attributes (num_persons CSV lookup and
+# ISO 13790 s13 setback respectively) but were missing from the
+# building.* forwarding allowlist -- the same gap cooking_carrier had.
+
+
+def test_region_code_and_setback_profile_forwarded():
+    payload = _load_payload()
+    payload["features"][0]["properties"]["buem"]["building"]["region_code"] = "GM0200"
+    payload["features"][0]["properties"]["buem"]["building"]["setback_profile"] = "night_only"
+    attrs = _building_attrs(payload)
+    assert attrs["region_code"] == "GM0200"
+    assert attrs["setback_profile"] == "night_only"
+
+
+def test_region_code_and_setback_profile_omitted_leave_default():
+    payload = _load_payload()
+    attrs = _building_attrs(payload)
+    assert "region_code" not in attrs
+    assert "setback_profile" not in attrs
+
+
 # ── building.equipment forwarding ────────────────────────────────────────
 
 

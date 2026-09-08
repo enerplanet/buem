@@ -386,7 +386,7 @@ class GeoJsonValidator:
                     "neighbour_status", "attic_condition", "cellar_condition",
                     "capacity", "num_persons", "residential_units", "archetype",
                     "equipment", "window_to_wall_ratio", "cooking_carrier",
-                    "include_dhw"):
+                    "include_dhw", "region_code", "setback_profile"):
             if key in building:
                 building_attributes[key] = building[key]
 
