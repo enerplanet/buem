@@ -108,6 +108,44 @@ def test_dhw_cooking_wired_for_residential_not_service():
     assert model_service.dhw_kWh is None
 
 
+def _air_gain_kw(model: ModelBUEM) -> np.ndarray:
+    """Per-timestep air-node gain the solver assembled: 0.5 * Q_ia."""
+    _, _, milp_meta = model._addConstraints()
+    return np.asarray(milp_meta["Q_air"], dtype=float)
+
+
+def test_service_internal_gains_exclude_elec_load():
+    """Households: Q_ia = Q_ig + elecLoad. Service types: Q_ia = Q_ig, because
+    occupancy already folds its per-type equipment and lighting gain density
+    into Q_ig for them (enerplanet/buem#16)."""
+    residential_attrs = _load_building_attributes("building_01_small_residential.json")
+    cfg = CfgBuilding(AttributeBuilder(payload_attrs=residential_attrs).build()).to_cfg_dict()
+    assert cfg["elec_load_as_gain"] is True
+    model = ModelBUEM(cfg)
+    model.sim_model(use_milp=False)
+    expected = 0.5 * (cfg["Q_ig"].to_numpy(dtype=float) + cfg["elecLoad"].to_numpy(dtype=float))
+    np.testing.assert_allclose(_air_gain_kw(model), expected, rtol=0, atol=1e-12)
+
+    # Same envelope, service occupancy: bakery, capacity 4, A_ref 80 m2.
+    service_attrs = dict(residential_attrs, building_type="bakery", capacity=4, A_ref=80.0)
+    cfg_service = CfgBuilding(AttributeBuilder(payload_attrs=service_attrs).build()).to_cfg_dict()
+    assert cfg_service["elec_load_as_gain"] is False
+    assert cfg_service["elecLoad"].sum() > cfg_service["Q_ig"].sum()  # the term being excluded is large
+    model_service = ModelBUEM(cfg_service)
+    model_service.sim_model(use_milp=False)
+    np.testing.assert_allclose(
+        _air_gain_kw(model_service), 0.5 * cfg_service["Q_ig"].to_numpy(dtype=float), rtol=0, atol=1e-12
+    )
+
+    # Cooling with elecLoad counted twice is at least an order of magnitude higher.
+    cfg_double = dict(cfg_service, elec_load_as_gain=True)
+    model_double = ModelBUEM(cfg_double)
+    model_double.sim_model(use_milp=False)
+    cooling = float(-model_service.cooling_load.sum())
+    cooling_double = float(-model_double.cooling_load.sum())
+    assert cooling_double > 10 * cooling, (cooling, cooling_double)
+
+
 def test_time_varying_comfort_bounds_change_heating_shape():
     """A comfortT_lb schedule with a deep night setback should shift heating
     demand away from those hours, unlike a flat scalar bound -- exercising the

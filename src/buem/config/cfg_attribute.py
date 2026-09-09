@@ -265,6 +265,14 @@ ATTRIBUTE_SPECS: dict[str, AttributeSpec] = {
             "where DHW is met by a separate system whose demand the caller "
             "accounts for itself.",
     ),
+    "elec_load_as_gain": AttributeSpec(
+        "elec_load_as_gain", AttributeCategory.FIXED, AttrType.BOOL, True,
+        doc="Whether elecLoad is added to Q_ig when the 5R1C solver forms "
+            "internal gains (Q_ia = Q_ig + elecLoad). True for households, "
+            "whose Q_ig is occupant heat only. AttributeBuilder sets False "
+            "for service building types, whose Q_ig already carries "
+            "occupancy's per-type equipment and lighting gain density.",
+    ),
     "latitude": AttributeSpec("latitude", AttributeCategory.FIXED, AttrType.FLOAT, DEFAULT_LATITUDE),
     "longitude": AttributeSpec("longitude", AttributeCategory.FIXED, AttrType.FLOAT, DEFAULT_LONGITUDE),
     # New structured component tree: component-level U (same for all elements) + element list
