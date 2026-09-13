@@ -118,12 +118,21 @@ def synthesize_missing_openings(
     country: str | None,
     bldg_tabula_id: str | None = None,
     window_to_wall_ratio: float | None = None,
+    window_U: float | None = None,
+    window_g_gl: float | None = None,
+    door_U: float | None = None,
 ) -> dict[str, Any]:
     """Fill in missing Windows/Doors/Ventilation from Walls geometry.
 
     Only synthesizes component groups the caller left empty/absent; any
     explicitly-supplied non-empty group is returned unchanged. Returns a
     new dict -- does not mutate ``components`` in place.
+
+    ``window_U``/``window_g_gl``/``door_U`` override the resolved archetype
+    row and the module fallbacks for the synthesized openings. A caller that
+    knows the real construction should not be given a reference value in its
+    place; window U-value in particular moves annual demand substantially.
+    ``None`` leaves each to the archetype or fallback as before.
 
     When *all three* of Windows/Doors/Ventilation are missing (the expected
     case: a caller that supplied wall/roof/floor geometry only), the
@@ -165,6 +174,10 @@ def synthesize_missing_openings(
     exposed = [w for w in walls if not w.is_shared]
     front_wall, back_wall = identify_front_back(exposed)
 
+    # Captured before the branch below reassigns these names from the
+    # resolved archetype row.
+    caller_window_U, caller_window_g_gl, caller_door_U = window_U, window_g_gl, door_U
+
     tabula_row = None
     if building_type:
         tabula_row = lookup_tabula_archetype(
@@ -204,6 +217,15 @@ def synthesize_missing_openings(
             "'Missing TABULA values use safe defaults').",
             building_type, construction_period, country, missing,
         )
+
+    # Applied to both branches at once: a caller-supplied value wins over
+    # the archetype row and over the fallbacks alike.
+    if caller_window_U is not None:
+        window_U = float(caller_window_U)
+    if caller_window_g_gl is not None:
+        window_g_gl = float(caller_window_g_gl)
+    if caller_door_U is not None:
+        door_U = float(caller_door_U)
 
     opening_elements = synthesize_openings(
         exposed, front_wall, back_wall,

@@ -15,6 +15,8 @@ from buem.buildings.mapping.element_factory import (
 )
 from buem.buildings.mapping.live_synthesis import (
     FALLBACK_DOOR_RATIO,
+    FALLBACK_DOOR_U,
+    FALLBACK_WINDOW_U,
     normalize_opening_azimuths,
     synthesize_missing_openings,
 )
@@ -290,6 +292,35 @@ def test_synthesized_windows_inherit_host_wall_azimuth():
         host = walls_by_id[win["surface"]]
         assert win["azimuth"] == pytest.approx(host["azimuth"])
         assert win["area"] == pytest.approx(DEFAULT_WINDOW_TO_WALL_RATIO * host["area"])
+
+
+def test_caller_glazing_properties_override_fallbacks():
+    """window_U/window_g_gl/door_U replace the values the synthesis would
+    otherwise take from the archetype row or the fallbacks."""
+    comps = _walls_only_components()
+    result = synthesize_missing_openings(
+        comps, building_type="MFH", construction_period="1965-1974", country="NL",
+        window_U=0.8, window_g_gl=0.35, door_U=1.4,
+    )
+    assert result["Windows"]["U"] == pytest.approx(0.8)
+    assert result["Windows"]["g_gl"] == pytest.approx(0.35)
+    assert result["Doors"]["U"] == pytest.approx(1.4)
+    # Synthesized elements carry geometry only and inherit the component's
+    # U, so the override reaches every window through that one value.
+    assert all("U" not in w for w in result["Windows"]["elements"])
+
+    # Omitted properties still resolve as before.
+    default_result = synthesize_missing_openings(
+        comps, building_type="MFH", construction_period="1965-1974", country="NL",
+    )
+    assert default_result["Windows"]["U"] == pytest.approx(FALLBACK_WINDOW_U)
+    assert default_result["Doors"]["U"] == pytest.approx(FALLBACK_DOOR_U)
+
+    # Sizing is untouched: only the properties change.
+    assert (
+        [w["area"] for w in result["Windows"]["elements"]]
+        == [w["area"] for w in default_result["Windows"]["elements"]]
+    )
 
 
 def test_synthesize_missing_openings_preserves_explicit_override():
