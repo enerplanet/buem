@@ -53,9 +53,15 @@ dependencies = [
     # weather: https://github.com/UU-BUEM/weather -- compulsory (2026-08-03): all
     # solar/T/GHI/DHI/DNI attributes come from this package's real per-location
     # fetch, no bundled/local-file fallback. Not on PyPI/conda yet, so a direct
-    # git reference (PEP 508), tracked at @main -- see infrastructure/env/
-    # buem_env.yml's header comment for the reproducibility trade-off.
-    "weather[pointquery,solar] @ git+https://github.com/UU-BUEM/weather.git@main",
+    # git reference (PEP 508), pinned rather than tracking a branch so a
+    # given buem commit always resolves the same weather: see infrastructure/
+    # env/buem_env.yml's header comment for the reasoning, and keep the two
+    # references in step.
+    #
+    # A commit rather than a tag: upstream's main is 19 commits past v1.9.2
+    # and no published tag names what is in use, so pinning to the latest
+    # release would roll those commits back. Installs 1.9.3.dev19+g36ff059a7.
+    "weather[pointquery,solar] @ git+https://github.com/UU-BUEM/weather.git@36ff059a780e1bce85e4dd170a6386f357696895",
     # occupancy: https://github.com/UU-BUEM/occupancy -- compulsory (2026-08-07):
     # all Q_ig/elecLoad/occ_nothome/occ_sleeping attributes come from this
     # package's real HouseholdProfile/ServiceBuildingProfile generation, no

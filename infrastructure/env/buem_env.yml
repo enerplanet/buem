@@ -11,17 +11,18 @@
 #   conda env update -n buem_env -f infrastructure/env/buem_env.yml --prune
 #   pip install -e . --no-deps        # re-run if pyproject.toml changed
 #
-# occupancy (below, under pip:) is pinned to a released tag rather than a
-# branch. Its output feeds the internal gains and electricity load that
-# enter the thermal balance, and the hot water and cooking series
-# directly, so a change in it moves every figure buem reports. A branch
-# reference leaves no record of which version produced a given result.
-# Upgrading is therefore a deliberate edit with its own commit, which is
-# also the place to record any change in results.
+# occupancy and weather (below, under pip:) are pinned rather than tracked
+# at @main. Between them they produce every driving input to the solve:
+# weather supplies the air temperature and irradiance boundary condition,
+# occupancy the internal gains, electricity load, hot water and cooking
+# series. A change in either moves the heating and cooling figures, and a
+# branch reference leaves no record of which version produced a given
+# result. Upgrading either is therefore a deliberate edit with its own
+# commit, which is also the place to record any change in results.
 #
-# weather is still tracked at @main, so `conda env update ... --prune`
-# picks up its latest pushed changes. Re-run the update command above
-# periodically to refresh it.
+# occupancy names a release tag. weather names a commit, because upstream's
+# releases trail the branch it is installed from and no published tag
+# covers the code in use; see the note beside that line.
 #
 # Every runtime dependency occupancy/weather themselves declare (confirmed
 # live against their pyproject.toml on GitHub: numpy, pandas, python-dotenv,
@@ -123,4 +124,7 @@ dependencies:
     # recorded because pip reports the tag object while git checks out the
     # commit; either value changing means the tag was moved.
     - occupancy @ git+https://github.com/UU-BUEM/occupancy.git@v6.0.0
-    - weather[pointquery,solar] @ git+https://github.com/UU-BUEM/weather.git@main
+    # Commit rather than a tag: upstream's main is 19 commits past v1.9.2
+    # and no published tag names what is in use, so pinning to the latest
+    # release would roll those commits back. Installs 1.9.3.dev19+g36ff059a7.
+    - weather[pointquery,solar] @ git+https://github.com/UU-BUEM/weather.git@36ff059a780e1bce85e4dd170a6386f357696895
