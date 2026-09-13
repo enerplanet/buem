@@ -11,12 +11,17 @@
 #   conda env update -n buem_env -f infrastructure/env/buem_env.yml --prune
 #   pip install -e . --no-deps        # re-run if pyproject.toml changed
 #
-# occupancy/weather (below, under pip:) are tracked at @main rather than a
-# pinned tag, so `conda env update ... --prune` always picks up their
-# latest pushed changes -- re-run the update command above periodically
-# to refresh. Pin to a specific released tag instead (e.g. @v3.0.0) if you
-# need a reproducible, non-moving environment (e.g. a frozen release build
-# or CI you want stable across upstream pushes).
+# occupancy (below, under pip:) is pinned to a released tag rather than a
+# branch. Its output feeds the internal gains and electricity load that
+# enter the thermal balance, and the hot water and cooking series
+# directly, so a change in it moves every figure buem reports. A branch
+# reference leaves no record of which version produced a given result.
+# Upgrading is therefore a deliberate edit with its own commit, which is
+# also the place to record any change in results.
+#
+# weather is still tracked at @main, so `conda env update ... --prune`
+# picks up its latest pushed changes. Re-run the update command above
+# periodically to refresh it.
 #
 # Every runtime dependency occupancy/weather themselves declare (confirmed
 # live against their pyproject.toml on GitHub: numpy, pandas, python-dotenv,
@@ -113,5 +118,9 @@ dependencies:
     # bundled/local-file fallback -- buem will not import without it.
     #
     # Tracks upstream directly; the enerplanet/occupancy fork pin is retired.
-    - occupancy @ git+https://github.com/UU-BUEM/occupancy.git@main
+    # v6.0.0 is an annotated tag, object b105a5a6847a85d8bcc82d3bd671f0ecfd3bc97e,
+    # pointing at commit f4e1adc7b3adb3f92adeacec5facb17ee8db5d89. Both are
+    # recorded because pip reports the tag object while git checks out the
+    # commit; either value changing means the tag was moved.
+    - occupancy @ git+https://github.com/UU-BUEM/occupancy.git@v6.0.0
     - weather[pointquery,solar] @ git+https://github.com/UU-BUEM/weather.git@main

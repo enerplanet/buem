@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `occupancy` is pinned to release `v6.0.0` instead of tracking `@main`,
+  in both `pyproject.toml` and `infrastructure/env/buem_env.yml`. Its
+  output feeds the internal gains and electricity load that enter the
+  thermal balance, and the hot water and cooking series directly, so a
+  change in it moves every figure buem reports. A branch reference left
+  no record of which version produced a given result. Behaviourally
+  neutral at the time of the change, since `main` pointed at the v6.0.0
+  commit, but an environment built before it may hold a different version
+  and should be rebuilt before results are compared. `weather` still
+  tracks `@main`. See enerplanet/buem#22.
+
 ## [6.1.1] - 2026-09-08
 
 ### Fixed

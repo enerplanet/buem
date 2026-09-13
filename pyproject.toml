@@ -60,11 +60,17 @@ dependencies = [
     # all Q_ig/elecLoad/occ_nothome/occ_sleeping attributes come from this
     # package's real HouseholdProfile/ServiceBuildingProfile generation, no
     # synthetic fallback. Not on PyPI/conda yet, so a direct git reference
-    # (PEP 508), tracked at @main -- see infrastructure/env/buem_env.yml's
-    # header comment for the reproducibility trade-off.
+    # (PEP 508), pinned to a released tag rather than a branch so a given
+    # buem commit always resolves the same occupancy: see infrastructure/
+    # env/buem_env.yml's header comment for the reasoning, and keep the two
+    # references in step.
     #
     # Tracks upstream directly; the enerplanet/occupancy fork pin is retired.
-    "occupancy @ git+https://github.com/UU-BUEM/occupancy.git@main",
+    # v6.0.0 is an annotated tag, object b105a5a6847a85d8bcc82d3bd671f0ecfd3bc97e,
+    # pointing at commit f4e1adc7b3adb3f92adeacec5facb17ee8db5d89. Both are
+    # recorded because pip reports the tag object while git checks out the
+    # commit; either value changing means the tag was moved.
+    "occupancy @ git+https://github.com/UU-BUEM/occupancy.git@v6.0.0",
 ]
 
 [project.optional-dependencies]
