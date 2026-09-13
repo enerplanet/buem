@@ -390,6 +390,14 @@ class GeoJsonValidator:
             if key in building:
                 building_attributes[key] = building[key]
 
+        # Glazing/door properties for synthesized openings. Unlike the list
+        # above these carry a unit, so they arrive as {value, unit}
+        # measurement objects as well as bare numbers, and need unwrapping
+        # before AttributeBuilder's float casts see them.
+        for key in ("window_U", "window_g_gl", "door_U"):
+            if key in building:
+                building_attributes[key] = extract_value(building[key])
+
         # Weather source metadata (buem.weather.provider/year) -- passed
         # through for record-keeping; the pinned contract requires
         # buem.weather.index/variables on every request (weather is

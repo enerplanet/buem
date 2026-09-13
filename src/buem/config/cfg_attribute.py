@@ -265,6 +265,14 @@ ATTRIBUTE_SPECS: dict[str, AttributeSpec] = {
             "where DHW is met by a separate system whose demand the caller "
             "accounts for itself.",
     ),
+    "elec_load_as_gain": AttributeSpec(
+        "elec_load_as_gain", AttributeCategory.FIXED, AttrType.BOOL, True,
+        doc="Whether elecLoad is added to Q_ig when the 5R1C solver forms "
+            "internal gains (Q_ia = Q_ig + elecLoad). True for households, "
+            "whose Q_ig is occupant heat only. AttributeBuilder sets False "
+            "for service building types, whose Q_ig already carries "
+            "occupancy's per-type equipment and lighting gain density.",
+    ),
     "latitude": AttributeSpec("latitude", AttributeCategory.FIXED, AttrType.FLOAT, DEFAULT_LATITUDE),
     "longitude": AttributeSpec("longitude", AttributeCategory.FIXED, AttrType.FLOAT, DEFAULT_LONGITUDE),
     # New structured component tree: component-level U (same for all elements) + element list
@@ -461,6 +469,33 @@ ATTRIBUTE_SPECS: dict[str, AttributeSpec] = {
             "(default) uses building_registry.DEFAULT_WINDOW_TO_WALL_RATIO. "
             "An out-of-range value raises rather than silently reverting "
             "to the default."
+        ),
+    ),
+    "window_U": AttributeSpec(
+        "window_U", AttributeCategory.FIXED, AttrType.FLOAT, None,
+        doc=(
+            "U-value of synthesized windows, W/(m2K). Overrides the "
+            "resolved TABULA archetype's U_Window_1 and the fallback. Used "
+            "only when the request supplies no explicit Windows component; "
+            "supplied window elements keep their own values. None (default) "
+            "leaves it to the archetype or fallback."
+        ),
+    ),
+    "window_g_gl": AttributeSpec(
+        "window_g_gl", AttributeCategory.FIXED, AttrType.FLOAT, None,
+        doc=(
+            "Solar energy transmittance of synthesized windows at normal "
+            "incidence, dimensionless. Overrides the resolved TABULA "
+            "archetype's g_gl_n_Window_1 and the fallback. Same conditions "
+            "as window_U."
+        ),
+    ),
+    "door_U": AttributeSpec(
+        "door_U", AttributeCategory.FIXED, AttrType.FLOAT, None,
+        doc=(
+            "U-value of synthesized doors, W/(m2K). Overrides the resolved "
+            "TABULA archetype's U_Door_1 and the fallback. Same conditions "
+            "as window_U."
         ),
     ),
     "residential_units": AttributeSpec(
