@@ -582,8 +582,17 @@ class ModelBUEM:
             else:
                 gwin = self.g_gl
 
+            # Shading applies to glazing as much as to opaque surfaces: the
+            # obstacles, overhangs and horizon it represents reduce the
+            # radiation reaching a window. Tilt selects the factor, matching
+            # the opaque treatment below. Applied to the incident solar,
+            # before the longwave sky correction further down, which is a
+            # separate term rather than part of the radiation shaded.
+            tilt = w.get("tilt")
+            F_sh = self.F_sh_hor if tilt is not None and float(tilt) < 45.0 else self.F_sh_vert
+
             # Q [kW] = area * g_gl * irr * fraction factors - small thermal sky term handled below
-            qwin = poa * area * gwin * (1.0 - self.F_f) * self.F_w
+            qwin = poa * area * gwin * F_sh * (1.0 - self.F_f) * self.F_w
             win_list.append(qwin)
 
         if not win_list:
