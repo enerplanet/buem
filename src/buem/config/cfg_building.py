@@ -343,6 +343,9 @@ class CfgBuilding:
             country=cfg.get("country"),
             bldg_tabula_id=cfg.get("bldg_tabula_id"),
             window_to_wall_ratio=cfg.get("window_to_wall_ratio"),
+            window_U=cfg.get("window_U"),
+            window_g_gl=cfg.get("window_g_gl"),
+            door_U=cfg.get("door_U"),
         )
         # A window/door cannot face a different direction than the wall (or
         # roof, for a skylight) it's embedded in -- force azimuth/tilt to

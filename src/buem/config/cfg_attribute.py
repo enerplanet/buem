@@ -471,6 +471,33 @@ ATTRIBUTE_SPECS: dict[str, AttributeSpec] = {
             "to the default."
         ),
     ),
+    "window_U": AttributeSpec(
+        "window_U", AttributeCategory.FIXED, AttrType.FLOAT, None,
+        doc=(
+            "U-value of synthesized windows, W/(m2K). Overrides the "
+            "resolved TABULA archetype's U_Window_1 and the fallback. Used "
+            "only when the request supplies no explicit Windows component; "
+            "supplied window elements keep their own values. None (default) "
+            "leaves it to the archetype or fallback."
+        ),
+    ),
+    "window_g_gl": AttributeSpec(
+        "window_g_gl", AttributeCategory.FIXED, AttrType.FLOAT, None,
+        doc=(
+            "Solar energy transmittance of synthesized windows at normal "
+            "incidence, dimensionless. Overrides the resolved TABULA "
+            "archetype's g_gl_n_Window_1 and the fallback. Same conditions "
+            "as window_U."
+        ),
+    ),
+    "door_U": AttributeSpec(
+        "door_U", AttributeCategory.FIXED, AttrType.FLOAT, None,
+        doc=(
+            "U-value of synthesized doors, W/(m2K). Overrides the resolved "
+            "TABULA archetype's U_Door_1 and the fallback. Same conditions "
+            "as window_U."
+        ),
+    ),
     "residential_units": AttributeSpec(
         "residential_units", AttributeCategory.FIXED, AttrType.FLOAT, 1.0,
         doc=(

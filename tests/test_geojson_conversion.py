@@ -167,6 +167,34 @@ def test_cooking_carrier_and_include_dhw_forwarded():
     assert attrs["include_dhw"] is False
 
 
+# ── glazing/door property overrides for synthesised openings ─────────────
+#
+# These carry a unit, so the backend sends window_U/door_U as {value, unit}
+# measurement objects while window_to_wall_ratio and window_g_gl are bare
+# numbers. Both shapes have to survive the conversion.
+
+
+def test_glazing_property_overrides_forwarded_in_both_payload_shapes():
+    payload = _load_payload()
+    building = payload["features"][0]["properties"]["buem"]["building"]
+    building["window_U"] = {"value": 0.9, "unit": "W/(m2K)"}
+    building["door_U"] = {"value": 1.4, "unit": "W/(m2K)"}
+    building["window_g_gl"] = 0.35
+    building["window_to_wall_ratio"] = 0.18
+    attrs = _building_attrs(payload)
+    assert attrs["window_U"] == 0.9
+    assert attrs["door_U"] == 1.4
+    assert attrs["window_g_gl"] == 0.35
+    assert attrs["window_to_wall_ratio"] == 0.18
+
+
+def test_glazing_property_overrides_omitted_leave_default():
+    payload = _load_payload()
+    attrs = _building_attrs(payload)
+    for key in ("window_U", "window_g_gl", "door_U"):
+        assert key not in attrs
+
+
 def test_cooking_carrier_omitted_leaves_default_to_attribute_builder():
     payload = _load_payload()
     attrs = _building_attrs(payload)
