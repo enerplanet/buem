@@ -17,8 +17,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   no record of which version produced a given result. Behaviourally
   neutral at the time of the change, since `main` pointed at the v6.0.0
   commit, but an environment built before it may hold a different version
-  and should be rebuilt before results are compared. `weather` still
-  tracks `@main`. See enerplanet/buem#22.
+  and should be rebuilt before results are compared. See
+  enerplanet/buem#22.
+- `weather` is pinned to commit `36ff059a` instead of tracking `@main`, in
+  the same two files. It supplies the air temperature and irradiance
+  boundary condition for every solve, so it moves heating and cooling
+  directly. A commit rather than a tag because upstream's `main` is 19
+  commits past its latest release, `v1.9.2`, and no published tag names
+  the code in use: pinning to the release would roll those commits back.
+  The pin installs `1.9.3.dev19+g36ff059a7`, which is what `@main`
+  resolved to at the time. An environment built earlier may hold an older
+  build and should be rebuilt before results are compared. See
+  enerplanet/buem#23.
 
 ## [6.1.1] - 2026-09-08
 
