@@ -547,6 +547,13 @@ class ModelBUEM:
             raise ValueError("Solar absorptance 'alpha' missing from CONST")
         alpha = float(self.bConst["alpha"])
 
+        # Component-level g_gl, the tier between a per-element value and the
+        # cfg default. Synthesized windows carry geometry only and record the
+        # resolved transmittance here, so without this tier an archetype's or
+        # a caller's value never reaches the gain (enerplanet/buem#26).
+        windows_comp = (self.cfg.get("components") or {}).get("Windows")
+        comp_g_gl = windows_comp.get("g_gl") if isinstance(windows_comp, dict) else None
+
         # windows: POA (kW/m2) * area (m2) * g * fractions -> kW
         win_list = []
         for w in self.windows:
@@ -568,7 +575,13 @@ class ModelBUEM:
                     f" (surface: {surf_ref}). Check _calcRadiation."
                 )
 
-            gwin = float(w["g_gl"]) if "g_gl" in w else self.g_gl
+            if "g_gl" in w:
+                gwin = float(w["g_gl"])
+            elif comp_g_gl is not None:
+                gwin = float(comp_g_gl)
+            else:
+                gwin = self.g_gl
+
             # Q [kW] = area * g_gl * irr * fraction factors - small thermal sky term handled below
             qwin = poa * area * gwin * (1.0 - self.F_f) * self.F_w
             win_list.append(qwin)

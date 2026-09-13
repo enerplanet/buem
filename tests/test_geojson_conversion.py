@@ -402,3 +402,69 @@ def test_electricity_load_profile_end_to_end(tmp_path):
     model.sim_model(use_milp=False)
     assert model.heating_load is not None
     assert len(model.heating_load) == len(cfg["weather"])
+
+
+# ── glazing transmittance reaches the solved result ──────────────────────
+#
+# These assert on the solve, not on the component. window_g_gl shipped
+# inert because the test that covered it stopped at the component, which
+# the synthesis does populate, while the solver read a different key and
+# never saw it (enerplanet/buem#26).
+
+
+def _solar_gain_kwh(payload) -> float:
+    """Annual window solar gain the solver actually assembled."""
+    result = validate_geojson_request(payload)
+    assert result.is_valid, [str(e) for e in result.get_errors()]
+    feature = result.validated_data["features"][0]
+    merged = AttributeBuilder(
+        payload_attrs=feature["properties"]["buem"]["building_attributes"],
+        building_id=feature.get("id"), db_fetcher=None,
+    ).build()
+    model = ModelBUEM(CfgBuilding(merged).to_cfg_dict())
+    model._initEnvelop()
+    model._initPara()
+    model._init5R1C()
+    return float(model.profiles["bQ_sol_Windows"].sum())
+
+
+def _opaque_only(payload):
+    building = payload["features"][0]["properties"]["buem"]["building"]
+    building["envelope"]["elements"] = [
+        e for e in building["envelope"]["elements"]
+        if e.get("type") in ("wall", "roof", "floor")
+    ]
+    return payload
+
+
+def test_window_g_gl_changes_the_solved_solar_gain():
+    """A supplied transmittance must reach the gain, not merely the
+    component dict."""
+    low = _solar_gain_kwh(_opaque_only(_load_payload()))
+    payload = _opaque_only(_load_payload())
+    payload["features"][0]["properties"]["buem"]["building"]["window_g_gl"] = 0.80
+    high = _solar_gain_kwh(payload)
+    assert high > low * 1.2, (low, high)
+
+
+def test_synthesized_transmittance_reaches_the_solver_not_the_default():
+    """With no caller value the synthesis resolves one and the solver must
+    use it, rather than falling through to the g_gl_n_Window default."""
+    payload = _opaque_only(_load_payload())
+    result = validate_geojson_request(payload)
+    feature = result.validated_data["features"][0]
+    merged = AttributeBuilder(
+        payload_attrs=feature["properties"]["buem"]["building_attributes"],
+        building_id=feature.get("id"), db_fetcher=None,
+    ).build()
+    cfg = CfgBuilding(merged).to_cfg_dict()
+    cfg["components"]["Windows"]["g_gl"] = 0.77   # stand in for a resolved value
+    model = ModelBUEM(cfg)
+    model._initEnvelop()
+    model._initPara()
+    model._init5R1C()
+    windows = model.cfg["components"]["Windows"]
+    assert windows["g_gl"] == pytest.approx(0.77)
+    assert cfg["g_gl_n_Window"] != pytest.approx(0.77)   # the default is still something else
+    baseline = _solar_gain_kwh(_opaque_only(_load_payload()))
+    assert float(model.profiles["bQ_sol_Windows"].sum()) > baseline * 1.2
