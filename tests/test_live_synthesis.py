@@ -267,6 +267,15 @@ def test_uniform_window_ratios_is_orientation_independent():
             uniform_window_ratios(bad)
 
 
+def test_default_window_to_wall_ratio_matches_published_stock():
+    """The default is sourced from measured European residential stock
+    (0.15 to 0.25 across TABULA, TEASER, City Energy Analyst and facade
+    segmentation), not chosen for convenience. See enerplanet/buem#17 and
+    the sources recorded beside the constant."""
+    assert DEFAULT_WINDOW_TO_WALL_RATIO == pytest.approx(0.20)
+    assert 0.15 <= DEFAULT_WINDOW_TO_WALL_RATIO <= 0.25
+
+
 def test_synthesized_windows_inherit_host_wall_azimuth():
     """A south-facing wall must receive south-facing glazing -- the
     orientation mismatch that motivated dropping TABULA's per-direction
