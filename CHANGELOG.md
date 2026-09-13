@@ -7,8 +7,70 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.2.0] - 2026-09-13
+
+**Results change in this release.** Heating and cooling figures produced
+by 6.1.1 or earlier are not comparable with figures produced by this
+one, and anything previously validated or published needs re-measuring.
+The request and response shapes are unchanged and backward compatible,
+so this is easy to miss by reading the interface alone.
+
+Two corrections move the numbers:
+
+- Service building types no longer count equipment heat twice. On the
+  small residential fixture, a bakery (capacity 4, 80 m2) moves from
+  27,374 to 491 kWh/a of cooling and from 3,240 to 18,285 kWh/a of
+  heating.
+- The default window-to-wall ratio falls from 0.5 to 0.20, which applies
+  to any request supplying wall, roof and floor geometry without
+  openings. For a building modelled consistently the effect on annual
+  heating is under one per cent, but it removes roughly half of a
+  systematic understatement in refurbishment savings: a saving reported
+  as 54.9 per cent at the old default becomes 64.4 per cent, against a
+  consistent 72.2 per cent.
+
+A third change closes the rest of that gap rather than moving results on
+its own: a caller can now supply window and door properties directly, so
+glazing can follow a refurbishment variant instead of staying at its
+as-built value while the opaque envelope improves.
+
+One finding worth recording, because it contradicts what this repository
+asserted for some time. More glazing does not always mean more heating.
+Against the 2.8 W/(m2K) fallback glazing the transmission loss term wins
+and it does, but on a refurbished envelope whose glazing was also
+replaced the solar gain term wins and the direction reverses. The
+comment beside `DEFAULT_WINDOW_TO_WALL_RATIO` is qualified accordingly.
+
+Both `occupancy` and `weather` are now pinned rather than tracked at
+`@main`. An environment built before this release may hold different
+versions of either and should be rebuilt before its results are compared
+with anything produced here.
+
+### Added
+
+- Optional building-level `window_U`, `window_g_gl` and `door_U` in the
+  request, applied to synthesized openings in place of the resolved
+  TABULA archetype's values or the module fallbacks. A supplied value
+  wins over both; omitting one leaves it resolved as before, and an
+  explicitly supplied `Windows` or `Doors` component is still returned
+  untouched. Sizing is unaffected: only the properties change. Names
+  match buem-gateway's `v6-draft` building object. `window_U` and
+  `door_U` accept a `{value, unit}` measurement object as well as a bare
+  number. See enerplanet/buem#18.
+
 ### Changed
 
+- The default window-to-wall ratio (`DEFAULT_WINDOW_TO_WALL_RATIO`) is
+  `0.20`, not `0.5`, and now carries its sources: TABULA Germany Table 25
+  (0.16 to 0.18 single-family, 0.21 to 0.25 multi-family), TEASER's 0.20
+  per facade, City Energy Analyst's Swiss archetypes (0.15 to 0.25) and
+  street-view facade segmentation (mean 0.158). TABULA's own rows agree,
+  at 19 per cent for DE.N.SFH.06 and 24 per cent for DE.N.MFH.06. The
+  sizing method is unchanged: each exposed wall still receives its own
+  area times the ratio, and each synthesized window still inherits its
+  host wall's real azimuth and tilt. A caller supplying
+  `window_to_wall_ratio` or explicit window elements is unaffected. See
+  enerplanet/buem#17.
 - `occupancy` is pinned to release `v6.0.0` instead of tracking `@main`,
   in both `pyproject.toml` and `infrastructure/env/buem_env.yml`. Its
   output feeds the internal gains and electricity load that enter the
@@ -44,6 +106,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Households are unchanged: their `Q_ig` is occupant heat only and
   `elecLoad` remains the sole appliance heat term. See
   enerplanet/buem#16.
+- `region_code` and `setback_profile` were not forwarded from a request.
+  Both are real attributes, selecting a region-specific row from the
+  `num_persons` reference table and an ISO 13790 section 13 setback
+  profile respectively, but `geojson_validator.py`'s building-level
+  forwarding list omitted them, so a caller could not reach either. See
+  enerplanet/buem#15.
 
 ## [6.1.1] - 2026-09-08
 
