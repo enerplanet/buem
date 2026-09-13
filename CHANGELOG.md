@@ -7,6 +7,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+**Results change again.** Figures from 6.2.0 and earlier are superseded,
+and anything measured or published against them needs re-running.
+
+**The refurbishment saving is not a usable check on this release.** Two
+of the corrections move heating in opposite directions and largely
+cancel in that ratio. On the small residential fixture the reported
+saving moves 75.1 to 74.3 per cent, eight tenths of a point, while the
+buildings behind it move the other way from each other: as-built annual
+heating falls 1.5 per cent and refurbished rises 1.9. Validating by
+comparing refurbishment percentages against the last run will suggest
+almost nothing changed, and that reading is wrong. The absolute
+kilowatt-hours are what moved, and they are what anything downstream
+consumes.
+
+The individual corrections are larger than the net. Carrying the
+transmittance through lowers as-built heating 4.2 per cent and
+refurbished 9.8, because the model had been admitting less solar gain
+than the archetype specifies. Shading the glazing then raises them 2.8
+and 12.9 per cent. Neither figure is visible in the saving.
+
+### Fixed
+
+- The solar transmittance of synthesized glazing never reached the
+  solver. It resolved per element, falling back to `g_gl_n_Window`,
+  which is populated only from a caller-supplied `Windows` component
+  during request conversion. Synthesis runs later and writes the value
+  at component level, and nothing carried it across, so every
+  automatically modelled building used the `0.50` default whatever its
+  archetype resolved or its caller supplied. The transmittance now has
+  the same element, component, cfg-default tiers the U-value already
+  had. Two consequences worth stating: the `window_g_gl` override
+  released in 6.2.0 was accepted, stored and then ignored, and it now
+  works; and as-built buildings were modelled with up to a third less
+  window solar gain than their archetype specifies, since TABULA's
+  values run 0.60 to 0.80. See enerplanet/buem#26.
+- The transmittance now follows the U-value when a refurbishment measure
+  has replaced the glazing, instead of keeping the as-built glazing's
+  own. TABULA records the latter and keeps it when a measure changes the
+  U, so a refurbished variant asked for a U that no glazing achieves at
+  that transmittance. It is taken from the glazing class nearest the U
+  in force: for the Dutch targets, `HR` at 1.8 and `HR_plus_plus` at
+  1.0; for the German, `HR_plus` at 1.3 and `HR_plus_plus_plus` at 0.8.
+  A caller-supplied value still wins, and an unchanged U keeps the
+  archetype's own. Shipped together with the propagation fix above and
+  not separable from it: propagation alone activates the frozen value
+  rather than the correct one, and would raise the reported saving to
+  76.6 per cent before this brings it to 74.3. See enerplanet/buem#26.
+- `F_sh_vert` and `F_sh_hor` are applied to window solar gains. They
+  were read and then applied only to walls, doors and roof, so the
+  shading reduction landed where the solar contribution is small and was
+  omitted where it dominates. EN ISO 13790 treats it as a glazing term.
+  See enerplanet/buem#27.
+- `F_f`'s validation message called it a floor reflection factor. It is
+  the window frame area fraction. No behaviour change. See
+  enerplanet/buem#28.
+
 ## [6.2.0] - 2026-09-13
 
 **Results change in this release.** Heating and cooling figures produced
@@ -50,7 +106,15 @@ with anything produced here.
 
 - Optional building-level `window_U`, `window_g_gl` and `door_U` in the
   request, applied to synthesized openings in place of the resolved
-  TABULA archetype's values or the module fallbacks. A supplied value
+  TABULA archetype's values or the module fallbacks.
+
+  **Correction, recorded after release:** `window_g_gl` did not work in
+  this version. It was accepted, forwarded and stored on the component,
+  and then ignored by the solve, which read a different key. `window_U`
+  and `door_U` did work. Fixed in the release that follows this one, see
+  enerplanet/buem#26. A request relying on `window_g_gl` against 6.2.0
+  produced results as though it had not been sent.
+ A supplied value
   wins over both; omitting one leaves it resolved as before, and an
   explicitly supplied `Windows` or `Doors` component is still returned
   untouched. Sizing is unaffected: only the properties change. Names
