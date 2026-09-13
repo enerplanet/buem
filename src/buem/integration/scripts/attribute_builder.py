@@ -664,6 +664,10 @@ class AttributeBuilder:
                 # types carry a gain_w_per_m2, so this is safe to pass
                 # unconditionally for the service-building branch.
                 floor_area_m2 = float(self.merged_attrs.get("A_ref", ATTRIBUTE_SPECS["A_ref"].default))
+                # floor_area_m2 makes occupancy fold its per-type equipment and
+                # lighting gain density into Q_ig, so elecLoad must not be added
+                # to the internal gains a second time (enerplanet/buem#16).
+                self.merged_attrs["elec_load_as_gain"] = False
                 # No DHW model for service buildings yet -- the signals
                 # generate_dhw_draws() consumes are household-specific.
                 dhw_liters = None

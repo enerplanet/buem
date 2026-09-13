@@ -955,8 +955,11 @@ class ModelBUEM:
 
         Internal gains
         --------------
-        ``Q_ia = Q_ig + elecLoad``, where ``Q_ig`` (occupant metabolic
-        and equipment-related heat, kW) and ``elecLoad`` (electricity
+        ``Q_ia = Q_ig + elecLoad``, or ``Q_ia = Q_ig`` when
+        ``cfg['elec_load_as_gain']`` is False (service building types,
+        whose ``Q_ig`` already includes an equipment and lighting gain
+        density). ``Q_ig`` (occupant metabolic and equipment-related
+        heat, kW) and ``elecLoad`` (electricity
         load, kW) are both supplied via ``cfg`` already scaled by
         real-time occupant presence — the upstream generator (see
         ``occupancy.core.buem_adapter.to_buem_profiles``) computes
@@ -1060,6 +1063,9 @@ class ModelBUEM:
         if "occ_nothome" not in self.profiles or "occ_sleeping" not in self.profiles:
             raise ValueError("Occupancy profiles not set in self.profiles. Call sim_model or _addPara first.")
 
+        # See cfg_attribute.py's elec_load_as_gain spec for when this is False.
+        elec_load_as_gain = bool(self.cfg.get("elec_load_as_gain", True))
+
         # Per-timestep gain arrays (also forwarded in milp_meta)
         Q_air_list = np.zeros(n)
         Q_surface_list = np.zeros(n)
@@ -1079,7 +1085,7 @@ class ModelBUEM:
             if "elecLoad" not in self.cfg:
                 raise ValueError("elecLoad (electricity load profile) must be provided in configuration")
             elecLoad = float(self.cfg["elecLoad"].iloc[i])
-            Q_ia = Q_ig + elecLoad
+            Q_ia = Q_ig + elecLoad if elec_load_as_gain else Q_ig
 
             if isinstance(self.profiles.get("T_e"), dict):
                 T_e = self.profiles["T_e"][(t1, t2)]

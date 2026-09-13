@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Service building types counted equipment heat twice in the 5R1C
+  internal gains. `AttributeBuilder` passes `floor_area_m2` to occupancy
+  for service types, so their `Q_ig` already carries occupancy's per-type
+  equipment and lighting gain density (`gain_w_per_m2`), and `ModelBUEM`
+  then added the full `elecLoad` on top (`Q_ia = Q_ig + elecLoad`). For
+  a bakery (capacity 4, 80 m2) that put 61 MWh/a of heat into the zone
+  and produced 27.4 MWh/a of cooling. New cfg attribute
+  `elec_load_as_gain` (default `True`); `AttributeBuilder` sets it
+  `False` for service types, and the solver then uses `Q_ia = Q_ig`.
+  Households are unchanged: their `Q_ig` is occupant heat only and
+  `elecLoad` remains the sole appliance heat term. See
+  enerplanet/buem#16.
+
 ## [6.1.1] - 2026-09-08
 
 ### Fixed
