@@ -65,11 +65,21 @@ DEFAULT_COMFORT_T_UB = 21.0
 # assumption about how a reference building happened to be oriented.
 #
 # Raising this ratio increases both solar gain and transmission loss.
-# In a heating-dominated maritime climate the loss term dominates over a
-# full year (window U-values are several times wall U-values, and winter
-# solar is weak), so a higher ratio raises annual heating demand even
-# though it also raises solar gain.
-DEFAULT_WINDOW_TO_WALL_RATIO = 0.5
+# Which term dominates over a full year depends on the glazing: against a
+# window U-value several times the wall's, the loss term wins and a higher
+# ratio raises annual heating demand. That reverses once the glazing is
+# itself refurbished, so the direction is not a property of the climate
+# alone. enerplanet/buem#17 records the measured figures.
+#
+# The value is taken from published European residential stock. TABULA
+# Germany Table 25 gives 0.16 to 0.18 for single-family and 0.21 to 0.25
+# for multi-family houses. TEASER defaults to 0.20 per facade for CityGML
+# enrichment, and City Energy Analyst's Swiss archetypes span 0.15 to
+# 0.25. Street-view facade segmentation measures a mean of 0.158. TABULA's
+# own archetype rows agree: DE.N.SFH.06 carries 34.2 m2 of glazing against
+# 177.6 m2 of wall (19 per cent), DE.N.MFH.06 81.4 against 336.0 (24 per
+# cent).
+DEFAULT_WINDOW_TO_WALL_RATIO = 0.20
 
 # Default location/provider for cfg_attribute.py's module-level weather
 # default and the "latitude"/"longitude"/"weather_provider" AttributeSpec
