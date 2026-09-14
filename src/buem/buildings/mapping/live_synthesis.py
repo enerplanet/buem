@@ -49,6 +49,7 @@ from buem.buildings.mapping.tabula_helpers import (
     lookup_tabula_archetype,
     safe_series_float,
 )
+from buem.config.reference_values import glazing_by_nearest_u
 
 logger = logging.getLogger(__name__)
 
@@ -69,6 +70,14 @@ logger = logging.getLogger(__name__)
 # fallback paths: both use building_registry.DEFAULT_WINDOW_TO_WALL_RATIO
 # via element_factory.uniform_window_ratios(). Only the door ratio still
 # needs a fallback, giving a ~2 m2 door on a typical ~40 m2 front wall.
+# How far a window U must move from the archetype's own before the glazing
+# counts as replaced. Deliberately far above float noise: a U-value that has
+# travelled through JSON can return as 2.7999999523162842 against a stored
+# 2.8, and treating that as a replacement would substitute a class-derived
+# transmittance for the archetype's correct one on every as-built building.
+# Far below any real measure, the smallest of which moves the U by 0.5.
+_U_UNCHANGED_TOLERANCE = 0.01
+
 FALLBACK_DOOR_RATIO = 0.05
 FALLBACK_WINDOW_U = 2.8
 FALLBACK_WINDOW_G_GL = 0.5
@@ -226,6 +235,30 @@ def synthesize_missing_openings(
         window_g_gl = float(caller_window_g_gl)
     if caller_door_U is not None:
         door_U = float(caller_door_U)
+
+    # Transmittance follows the U-value: a U and a g that do not belong to
+    # the same glazing describe a window that does not exist. TABULA records
+    # the as-built glazing's own transmittance and keeps it when a measure
+    # replaces the glazing, so a refurbished window U arrives paired with a
+    # transmittance no glazing achieves at that U. Re-derive it from the
+    # glazing class nearest the U actually in force (enerplanet/buem#26).
+    #
+    # Only when the U has moved away from the archetype's own, which is what
+    # identifies replaced glazing, and never over a caller's explicit value.
+    # An unchanged U keeps the archetype's transmittance, which is the
+    # correct one at the as-built state and is paired with that U by
+    # construction.
+    if tabula_row is not None and caller_window_g_gl is None:
+        archetype_window_U = safe_series_float(tabula_row, "U_Window_1", None)
+        if archetype_window_U and abs(window_U - archetype_window_U) > _U_UNCHANGED_TOLERANCE:
+            spec = glazing_by_nearest_u(window_U)
+            logger.info(
+                "Window U %.2f differs from archetype's %.2f, so the glazing was "
+                "replaced: taking transmittance %.2f from class %s rather than the "
+                "archetype's %.2f",
+                window_U, archetype_window_U, spec.g_value, spec.glazing_type, window_g_gl,
+            )
+            window_g_gl = spec.g_value
 
     opening_elements = synthesize_openings(
         exposed, front_wall, back_wall,

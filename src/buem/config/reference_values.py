@@ -324,6 +324,27 @@ def resolve_glazing(value: object) -> GlazingSpec | None:
     return table[name]
 
 
+def glazing_by_nearest_u(u_value: float) -> GlazingSpec:
+    """The glazing class whose U-value is closest to ``u_value``.
+
+    For resolving a solar transmittance to go with a U-value that came
+    from somewhere other than this table, such as a refurbishment
+    measure's target. TABULA carries the as-built glazing's own
+    transmittance and keeps it when a measure replaces the glazing, so
+    the pairing has to be re-derived from the new U rather than
+    inherited.
+
+    Ties go to the lower U-value, which is deterministic and errs towards
+    the better-performing class, whose transmittance is the lower of the
+    two.
+    """
+    table = load_glazing_table()
+    return min(
+        table.values(),
+        key=lambda spec: (abs(spec.u_value - float(u_value)), spec.u_value),
+    )
+
+
 @dataclass(frozen=True)
 class NumPersonsRow:
     """One row of ``num_persons_by_building_type.csv``."""
@@ -444,6 +465,7 @@ __all__ = [
     "GlazingSpec",
     "NumPersonsRow",
     "SetbackProfile",
+    "glazing_by_nearest_u",
     "load_dhw_cooking_constants",
     "load_glazing_table",
     "load_num_persons_table",

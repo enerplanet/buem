@@ -6,6 +6,7 @@ check for the LOD2Mapper offline-pipeline refactor these were extracted
 from. None of this touches weather/occupancy, so no BUEM_WEATHER_DATA_DIR
 setup is needed (unlike tests/test_building_types.py).
 """
+import pandas as pd
 import pytest
 
 from buem.buildings.mapping.element_factory import (
@@ -22,6 +23,7 @@ from buem.buildings.mapping.live_synthesis import (
 )
 from buem.buildings.pipeline import DEFAULT_WORKBOOK
 from buem.config.building_registry import DEFAULT_WINDOW_TO_WALL_RATIO
+from buem.config.reference_values import glazing_by_nearest_u
 
 # The bundled TABULA reference workbook is *.xlsx-gitignored (repo-wide rule,
 # predates this test file) -- present on a dev machine that's run the offline
@@ -535,3 +537,72 @@ def test_thermal_properties_comfort_defaults_come_from_registry():
     assert props.comfortT_lb == DEFAULT_COMFORT_T_LB
     assert props.comfortT_ub == DEFAULT_COMFORT_T_UB
     assert props.comfortT_lb < props.comfortT_ub
+
+
+# ── glazing transmittance follows the U-value (enerplanet/buem#26) ───────
+
+
+def _archetype_row(u_window=5.2, g_window=0.80):
+    """A minimal TABULA row, so the archetype path can be exercised without
+    the bundled workbook, which is gitignored and absent in CI."""
+    return pd.Series({
+        "U_Wall_1": 1.6, "U_Roof_1": 1.5, "U_Floor_1": 1.7,
+        "U_Window_1": u_window, "g_gl_n_Window_1": g_window, "U_Door_1": 3.0,
+        "A_Wall_1": 100.0, "A_Door_1": 2.0, "n_air_use": 0.5,
+        "Code_BuildingVariant": "NL.N.SFH.02.Deta",
+    })
+
+
+def _synth_with_archetype(monkeypatch, row, **kwargs):
+    monkeypatch.setattr(
+        "buem.buildings.mapping.live_synthesis.lookup_tabula_archetype",
+        lambda *a, **k: row,
+    )
+    return synthesize_missing_openings(
+        _walls_only_components(),
+        building_type="SFH", construction_period="02", country="NL",
+        **kwargs,
+    )
+
+
+@pytest.mark.parametrize(
+    "target_u,expected_class,expected_g",
+    [
+        (1.8, "HR", 0.72),                 # NL standard refurbishment target
+        (1.0, "HR_plus_plus", 0.60),       # NL advanced
+        (1.3, "HR_plus", 0.62),            # DE standard
+        (0.8, "HR_plus_plus_plus", 0.50),  # DE advanced
+    ],
+)
+def test_refurbished_window_u_resolves_its_own_transmittance(
+    monkeypatch, target_u, expected_class, expected_g
+):
+    """Each measure-defined target U resolves to the glazing class nearest it
+    and takes that class's transmittance, rather than keeping the archetype's
+    as-built one, which belongs to different glazing."""
+    spec = glazing_by_nearest_u(target_u)
+    assert spec.glazing_type == expected_class
+    assert spec.g_value == pytest.approx(expected_g)
+
+    result = _synth_with_archetype(monkeypatch, _archetype_row(), window_U=target_u)
+    assert result["Windows"]["g_gl"] == pytest.approx(expected_g)
+    assert result["Windows"]["U"] == pytest.approx(target_u)
+
+
+@pytest.mark.parametrize("supplied_u", [5.2, 5.200000047683716, None])
+def test_unchanged_window_u_keeps_the_archetype_transmittance(monkeypatch, supplied_u):
+    """At the as-built state the archetype's transmittance is the correct one
+    and is paired with its U by construction. A U that matches to within float
+    noise, as one round-tripped through JSON can, must not read as replaced
+    glazing."""
+    result = _synth_with_archetype(
+        monkeypatch, _archetype_row(u_window=5.2, g_window=0.80), window_U=supplied_u
+    )
+    assert result["Windows"]["g_gl"] == pytest.approx(0.80)
+
+
+def test_caller_transmittance_wins_over_the_derived_one(monkeypatch):
+    result = _synth_with_archetype(
+        monkeypatch, _archetype_row(), window_U=1.0, window_g_gl=0.42
+    )
+    assert result["Windows"]["g_gl"] == pytest.approx(0.42)

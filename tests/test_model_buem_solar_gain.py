@@ -141,3 +141,30 @@ def test_windows_component_configured_but_empty_gives_zero_gain_not_error():
     model._init5R1C()  # calls _calcRadiation internally; must not raise
 
     assert np.all(model.profiles["bQ_sol_Windows"] == 0.0)
+
+
+def test_shading_factor_reduces_window_solar_gain():
+    """F_sh_vert applies to glazing, not only to opaque surfaces. The
+    obstacles, overhangs and horizon it represents reduce the radiation
+    reaching a window (enerplanet/buem#27)."""
+    import copy as _copy
+
+    from buem.config.cfg_attribute import cfg as DEFAULT_CFG
+
+    base = _copy.deepcopy(DEFAULT_CFG)
+    base["F_sh_vert"] = 1.0
+    unshaded = ModelBUEM(base)
+    unshaded._initEnvelop()
+    unshaded._initPara()
+    unshaded._init5R1C()
+
+    shaded_cfg = _copy.deepcopy(DEFAULT_CFG)
+    shaded_cfg["F_sh_vert"] = 0.5
+    shaded = ModelBUEM(shaded_cfg)
+    shaded._initEnvelop()
+    shaded._initPara()
+    shaded._init5R1C()
+
+    assert float(shaded.profiles["bQ_sol_Windows"].sum()) < float(
+        unshaded.profiles["bQ_sol_Windows"].sum()
+    )

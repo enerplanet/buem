@@ -536,7 +536,7 @@ class ModelBUEM:
         if "F_w" not in self.cfg:
             raise ValueError("F_w (window frame factor) must be specified")
         if "F_f" not in self.cfg:
-            raise ValueError("F_f (floor reflection factor) must be specified")
+            raise ValueError("F_f (window frame area fraction) must be specified")
 
         self.F_sh_vert = float(self.cfg["F_sh_vert"])
         self.F_sh_hor = float(self.cfg["F_sh_hor"])
@@ -546,6 +546,13 @@ class ModelBUEM:
         if "alpha" not in self.bConst:
             raise ValueError("Solar absorptance 'alpha' missing from CONST")
         alpha = float(self.bConst["alpha"])
+
+        # Component-level g_gl, the tier between a per-element value and the
+        # cfg default. Synthesized windows carry geometry only and record the
+        # resolved transmittance here, so without this tier an archetype's or
+        # a caller's value never reaches the gain (enerplanet/buem#26).
+        windows_comp = (self.cfg.get("components") or {}).get("Windows")
+        comp_g_gl = windows_comp.get("g_gl") if isinstance(windows_comp, dict) else None
 
         # windows: POA (kW/m2) * area (m2) * g * fractions -> kW
         win_list = []
@@ -568,9 +575,24 @@ class ModelBUEM:
                     f" (surface: {surf_ref}). Check _calcRadiation."
                 )
 
-            gwin = float(w["g_gl"]) if "g_gl" in w else self.g_gl
+            if "g_gl" in w:
+                gwin = float(w["g_gl"])
+            elif comp_g_gl is not None:
+                gwin = float(comp_g_gl)
+            else:
+                gwin = self.g_gl
+
+            # Shading applies to glazing as much as to opaque surfaces: the
+            # obstacles, overhangs and horizon it represents reduce the
+            # radiation reaching a window. Tilt selects the factor, matching
+            # the opaque treatment below. Applied to the incident solar,
+            # before the longwave sky correction further down, which is a
+            # separate term rather than part of the radiation shaded.
+            tilt = w.get("tilt")
+            F_sh = self.F_sh_hor if tilt is not None and float(tilt) < 45.0 else self.F_sh_vert
+
             # Q [kW] = area * g_gl * irr * fraction factors - small thermal sky term handled below
-            qwin = poa * area * gwin * (1.0 - self.F_f) * self.F_w
+            qwin = poa * area * gwin * F_sh * (1.0 - self.F_f) * self.F_w
             win_list.append(qwin)
 
         if not win_list:
