@@ -118,21 +118,20 @@ with anything produced here.
 
 - Optional building-level `window_U`, `window_g_gl` and `door_U` in the
   request, applied to synthesized openings in place of the resolved
-  TABULA archetype's values or the module fallbacks.
-
-  **Correction, recorded after release:** `window_g_gl` did not work in
-  this version. It was accepted, forwarded and stored on the component,
-  and then ignored by the solve, which read a different key. `window_U`
-  and `door_U` did work. Fixed in the release that follows this one, see
-  enerplanet/buem#26. A request relying on `window_g_gl` against 6.2.0
-  produced results as though it had not been sent.
- A supplied value
+  TABULA archetype's values or the module fallbacks. A supplied value
   wins over both; omitting one leaves it resolved as before, and an
   explicitly supplied `Windows` or `Doors` component is still returned
   untouched. Sizing is unaffected: only the properties change. Names
   match buem-gateway's `v6-draft` building object. `window_U` and
   `door_U` accept a `{value, unit}` measurement object as well as a bare
   number. See enerplanet/buem#18.
+
+  **Correction, recorded after release:** `window_g_gl` did not work in
+  this version. It was accepted, forwarded and stored on the component,
+  and then ignored by the solve, which read a different key. `window_U`
+  and `door_U` did work. A request relying on `window_g_gl` against
+  6.2.0 produced results as though it had not been sent. Fixed in 6.3.0,
+  see enerplanet/buem#26.
 
 ### Changed
 
