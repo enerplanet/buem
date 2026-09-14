@@ -7,25 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.3.0] - 2026-09-14
+
 **Results change again.** Figures from 6.2.0 and earlier are superseded,
 and anything measured or published against them needs re-running.
 
-**The refurbishment saving is not a usable check on this release.** Two
-of the corrections move heating in opposite directions and largely
-cancel in that ratio. On the small residential fixture the reported
-saving moves 75.1 to 74.3 per cent, eight tenths of a point, while the
-buildings behind it move the other way from each other: as-built annual
-heating falls 1.5 per cent and refurbished rises 1.9. Validating by
-comparing refurbishment percentages against the last run will suggest
-almost nothing changed, and that reading is wrong. The absolute
-kilowatt-hours are what moved, and they are what anything downstream
-consumes.
+**Neither the refurbishment saving nor a single building is a usable
+check on this release.** The corrections move heating in opposite
+directions and largely cancel in the saving ratio, so on the small
+residential fixture that ratio moves 75.1 to 74.3 per cent, eight tenths
+of a point, while both buildings behind it moved: as-built annual
+heating falls 1.5 per cent and refurbished rises 1.9. Checking the ratio
+sees almost nothing. Checking one building sees a change whose sign
+depends on which building was picked. The absolute kilowatt-hours are
+what moved, and they are what anything downstream consumes.
 
-The individual corrections are larger than the net. Carrying the
-transmittance through lowers as-built heating 4.2 per cent and
-refurbished 9.8, because the model had been admitting less solar gain
-than the archetype specifies. Shading the glazing then raises them 2.8
-and 12.9 per cent. Neither figure is visible in the saving.
+The individual corrections are larger than the net, and they are
+sequential: each is measured against the state the previous one left, so
+they do not sum. On the fixture, annual heating:
+
+| Step | As-built | Refurbished |
+|---|---|---|
+| 6.2.0 | 21,628.5 | 5,379.3 |
+| carrying the transmittance through | -4.2% | -9.8% |
+| transmittance following the U-value | not applicable | +7.0% |
+| shading the glazing | +2.8% | +5.5% |
+| this release | 21,310.1 | 5,478.9 |
+
+The as-built case has no second step: its transmittance is unchanged, so
+only a refurbished building sees that correction. Anyone measuring one
+correction alone will get a figure that looks alarming by itself, which
+is what this table is here to prevent.
 
 ### Fixed
 
