@@ -18,6 +18,7 @@ unset, behavior is completely unchanged from before this backend existed.
 
 from __future__ import annotations
 
+import inspect
 import io
 import logging
 import os
@@ -30,6 +31,10 @@ import requests
 from weather import get_point_weather  # type: ignore[import]
 
 logger = logging.getLogger(__name__)
+
+# What both backends ask weather for: air temperature plus the three solar
+# components pvlib's plane-of-array transposition needs.
+WEATHER_VARIABLES = "T,GHI,DHI,DNI"
 
 
 def _cache_dir() -> Path:
@@ -63,9 +68,8 @@ def _fetch_remote(latitude: float, longitude: float, year: int, provider: str) -
     params: dict[str, str | int | float] = {
         "provider": provider, "lat": latitude, "lon": longitude, "year": year,
         # weather >= 2.0.0's /v1/weather/point rejects a request that names
-        # neither variables nor use_case. buem needs air temperature plus the
-        # three solar components.
-        "variables": "T,GHI,DHI,DNI",
+        # neither variables nor use_case.
+        "variables": WEATHER_VARIABLES,
     }
     resp = requests.get(
         f"{api_url}/v1/weather/point",
@@ -122,9 +126,12 @@ def get_or_fetch_weather(
         df = _fetch_remote(latitude, longitude, year, provider)
     else:
         data_dir = os.environ.get("BUEM_WEATHER_DATA_DIR")
-        df = get_point_weather(
-            latitude, longitude, year, provider=provider, data_dir=data_dir
-        )
+        kwargs: dict[str, Any] = {"provider": provider, "data_dir": data_dir}
+        # weather >= 2.0 rejects a call that names neither variables nor
+        # use_case; the pinned 1.9.3.dev19 has no variables parameter at all.
+        if "variables" in inspect.signature(get_point_weather).parameters:
+            kwargs["variables"] = WEATHER_VARIABLES
+        df = get_point_weather(latitude, longitude, year, **kwargs)
     try:
         df.reset_index().to_feather(path)
     except (OSError, ValueError) as exc:
