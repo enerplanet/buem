@@ -16,11 +16,10 @@
 #   docker compose -f infrastructure/container/docker-compose.yml up -d
 # ──────────────────────────────────────────────────────────────────────────────
 
-FROM continuumio/miniconda3:24.1.2-0 AS builder
-
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl coinor-cbc \
-    && rm -rf /var/lib/apt/lists/*
+# 25.3.1-1 is the newest miniconda3 tag built on Debian bookworm; the 26.x
+# tags are trixie. bullseye's security pool was pruned after its LTS ended
+# on 2026-08-31, which broke apt on the previous 24.1.2-0 base.
+FROM continuumio/miniconda3:25.3.1-1 AS builder
 
 # Create the conda environment from the pinned spec file
 COPY infrastructure/env/buem_env.yml /tmp/buem_env.yml
@@ -35,14 +34,17 @@ RUN conda env create -f /tmp/buem_env.yml \
 RUN /opt/conda/envs/buem_env/bin/pip install gunicorn
 
 # ── Runtime stage ──────────────────────────────────────────────────────────
-FROM continuumio/miniconda3:24.1.2-0
+FROM continuumio/miniconda3:25.3.1-1
 
 LABEL org.opencontainers.image.source="https://github.com/UU-BUEM/buem"
 LABEL org.opencontainers.image.description="Building energy model API — UU-BUEM"
 LABEL org.opencontainers.image.licenses="MIT"
 
+# curl serves the health checks here and in buem-gateway's compose files,
+# which run it inside this container. cbc comes from the conda env
+# (coincbc in buem_env.yml, BUEM_CBC_EXE in docker-compose.yml).
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl coinor-cbc \
+    && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy the pre-built conda environment from builder
