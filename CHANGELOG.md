@@ -9,10 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `include_timeseries=true` on `/api/process` returns the hourly arrays
+  inline only. The gzip-compressed `buem_ts_<uuid>.json.gz` file is no
+  longer written as a side effect, and `timeseries_file` is absent unless
+  the new flag below is set.
+
 - File-based profile inputs (`inputs.electricity_load_profile.path` and
   `weather.profile.path`) are resolved and must lie inside
   `BUEM_DATA_DIR`, which must be set; they must be regular files of at
   most 32 MiB. Read and parse errors no longer quote parser output.
+
+### Added
+
+- `save_timeseries_file=true` (query string or top-level body key) on
+  `/api/process` writes the hourly arrays to a gzip JSON file under
+  `BUEM_RESULTS_DIR` and returns its `/api/files/...` path in
+  `thermal_load_profile.timeseries_file`, independently of
+  `include_timeseries`.
 
 ## [6.3.2] - 2026-10-02
 

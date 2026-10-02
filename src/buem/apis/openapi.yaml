@@ -71,6 +71,7 @@ paths:
       tags: [Simulation]
       parameters:
         - $ref: "#/components/parameters/include_timeseries"
+        - $ref: "#/components/parameters/save_timeseries_file"
       requestBody:
         required: true
         content:
@@ -162,7 +163,7 @@ paths:
       description: |
         Retrieve a time-series result file previously saved by the model.
         The file path is returned in `thermal_load_profile.timeseries_file`
-        when `include_timeseries=true`.
+        when `save_timeseries_file=true`.
 
         **File format:** Result files are gzip-compressed JSON (`.json.gz`).
         To read the contents, decompress first:
@@ -234,8 +235,19 @@ components:
         type: boolean
         default: false
       description: |
-        When `true`, include full hourly arrays in the response and save a
-        compressed time-series file on the server.
+        When `true`, include the full hourly arrays in the response. No file
+        is written unless `save_timeseries_file` is also `true`.
+    save_timeseries_file:
+      name: save_timeseries_file
+      in: query
+      required: false
+      schema:
+        type: boolean
+        default: false
+      description: |
+        When `true`, write the hourly arrays to a gzip-compressed JSON file
+        under the server's results directory and return its download path
+        in `thermal_load_profile.timeseries_file`.
 
   # ── Reusable responses ───────────────────────────────────────────
   responses:
@@ -824,7 +836,8 @@ components:
           type: string
           description: >
             Download path for the gzip time-series file
-            (e.g. `/api/files/buem_ts_abc123.json.gz`)
+            (e.g. `/api/files/buem_ts_abc123.json.gz`).
+            Present only when `save_timeseries_file=true`.
 
     LoadSummary:
       type: object

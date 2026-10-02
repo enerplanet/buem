@@ -40,7 +40,12 @@ class GeoJsonProcessor:
     payload : Dict[str, Any]
         GeoJSON FeatureCollection or single Feature.
     include_timeseries : bool, optional
-        Save hourly timeseries to .gz file (default: False).
+        Include the hourly arrays inline in each feature's
+        thermal_load_profile.timeseries (default: False).
+    save_timeseries_file : bool, optional
+        Write the hourly arrays to a gzip JSON file under result_save_dir
+        and return its download path in thermal_load_profile.timeseries_file
+        (default: False). Independent of include_timeseries.
     db_fetcher : Callable, optional
         Function(building_id) -> Dict of additional attributes.
     result_save_dir : str or Path, optional
@@ -51,11 +56,13 @@ class GeoJsonProcessor:
         self,
         payload: dict[str, Any],
         include_timeseries: bool = False,
+        save_timeseries_file: bool = False,
         db_fetcher: Callable[[str], dict[str, Any]] | None = None,
         result_save_dir: str | None = None,
     ):
         self.payload = payload
         self.include_timeseries = include_timeseries
+        self.save_timeseries_file = save_timeseries_file
         self.db_fetcher = db_fetcher
 
         # Result save directory
@@ -260,8 +267,9 @@ class GeoJsonProcessor:
             "validation_warnings": [w.message for w in validation_result.get_warnings()]
         }
 
-        # Save timeseries if requested
-        if self.include_timeseries and len(times):
+        # The file is written only on request; the inline arrays below do
+        # not depend on it.
+        if self.save_timeseries_file and len(times):
             try:
                 fname = self._save_timeseries(times, heating, cooling, electricity, dhw, cooking_gas)
                 profile["timeseries_file"] = f"/api/files/{fname}"
@@ -439,7 +447,7 @@ class GeoJsonProcessor:
         if energy_intensity is not None:
             profile["summary"]["energy_intensity"] = {"value": energy_intensity, "unit": "kWh/m2"}
 
-        # Include timeseries data if specifically requested in response (not just for saving)
+        # Inline arrays only on request; writing the file is a separate flag.
         if self.include_timeseries and has_times:
             profile["timeseries"] = {
                 "unit": "kW",  # applies to every series below except kitchen
