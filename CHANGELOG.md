@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- File-based profile inputs (`inputs.electricity_load_profile.path` and
+  `weather.profile.path`) are resolved and must lie inside
+  `BUEM_DATA_DIR`, which must be set; they must be regular files of at
+  most 32 MiB. Read and parse errors no longer quote parser output.
+
 ## [6.3.2] - 2026-10-02
 
 **Results unchanged.** Container base only. No `buem-model:6.3.1` image
