@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- The container base image moves from `continuumio/miniconda3:24.1.2-0`
+  (Debian bullseye) to `25.3.1-1` (Debian bookworm). bullseye's security
+  package pool was pruned after its LTS ended on 2026-08-31, so
+  `apt-get install` failed and no 6.3.1 image could be published.
+
+### Removed
+
+- `coinor-cbc` is no longer installed from apt. The conda environment
+  already provides `cbc` through `coincbc`, which is the binary
+  `BUEM_CBC_EXE` points at. `curl` stays for the health checks.
+
 ## [6.3.1] - 2026-10-02
 
 **Results unchanged.** A compatibility fix only: no figure moves against
