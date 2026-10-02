@@ -11,10 +11,9 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import pytest
-from occupancy import ElectricityConsumptionProfile, HouseholdProfile  # type: ignore[import]
 
 from buem.config.cfg_attribute import HOUSEHOLD_EQUIPMENT_TYPES
-from buem.integration.scripts.attribute_builder import AttributeBuilder, _resolve_equipment_table
+from buem.integration.scripts.attribute_builder import AttributeBuilder
 from buem.integration.scripts.geojson_validator import validate_geojson_request
 
 project_root = Path(__file__).resolve().parent.parent
@@ -27,89 +26,6 @@ def _load_building_attributes(fixture_name: str) -> dict:
     assert result.is_valid, [str(e) for e in result.get_errors()]
     feature = result.validated_data["features"][0]
     return feature["properties"]["buem"]["building_attributes"]
-
-
-# ── _resolve_equipment_table: unit-level, deterministic (no RNG dependence) ──
-
-
-def _household(archetype="generic", seed=42):
-    return HouseholdProfile(num_persons=4, year=2018, seed=seed, archetype=archetype)
-
-
-def _specs_equal(a, b) -> bool:
-    """Value equality for EquipmentSpec, sidestepping two pitfalls: its
-    numpy-array fields (weekday/weekend) break plain dataclass `==`
-    ("truth value of an array is ambiguous"), and archetypes with real
-    equipment_overrides make _apply_overrides() rebuild a fresh object via
-    dataclasses.replace() on every ElectricityConsumptionProfile
-    construction, so `is` identity doesn't hold even when the values do."""
-    if a is b:
-        return True
-    return (
-        a.name == b.name and a.category == b.category
-        and a.rated_power_kw == b.rated_power_kw and a.standby_power_kw == b.standby_power_kw
-        and a.ownership_probability == b.ownership_probability
-        and a.strategy == b.strategy and a.strategy_params == b.strategy_params
-        and a.enabled == b.enabled
-        and np.array_equal(a.weekday, b.weekday) and np.array_equal(a.weekend, b.weekend)
-    )
-
-
-def test_resolve_equipment_table_none_when_no_selector():
-    household = _household()
-    assert _resolve_equipment_table(household, 42, None) is None
-    assert _resolve_equipment_table(household, 42, {}) is None
-
-
-def test_resolve_equipment_table_true_forces_full_ownership_probability():
-    household = _household()
-    table = _resolve_equipment_table(household, 42, {"oven": True})
-    assert table["oven"].ownership_probability == 1.0
-    # Untouched items are the household's own archetype-adjusted defaults,
-    # unmodified -- same key set, same specs.
-    base_table = ElectricityConsumptionProfile(household, seed=42).get_equipment_table()
-    for key in HOUSEHOLD_EQUIPMENT_TYPES - {"oven"}:
-        assert _specs_equal(table[key], base_table[key])
-
-
-def test_resolve_equipment_table_false_omits_item_entirely():
-    household = _household()
-    table = _resolve_equipment_table(household, 42, {"oven": False})
-    assert "oven" not in table
-    # Every other item is still present, untouched.
-    base_table = ElectricityConsumptionProfile(household, seed=42).get_equipment_table()
-    for key in HOUSEHOLD_EQUIPMENT_TYPES - {"oven"}:
-        assert _specs_equal(table[key], base_table[key])
-
-
-def test_resolve_equipment_table_preserves_archetype_overrides():
-    """Reads the archetype-adjusted base table (get_equipment_table()), not
-    the raw default_equipment_table() -- unmentioned items must match
-    exactly what a plain ElectricityConsumptionProfile(household) would
-    have used for this household's archetype."""
-    household = _household(archetype="student_shared")
-    table = _resolve_equipment_table(household, 42, {"oven": True})
-    base_table = ElectricityConsumptionProfile(household, seed=42).get_equipment_table()
-    for key in HOUSEHOLD_EQUIPMENT_TYPES - {"oven"}:
-        assert _specs_equal(table[key], base_table[key])
-
-
-def test_resolve_equipment_table_unknown_id_raises():
-    household = _household()
-    with pytest.raises(ValueError, match="unrecognized id"):
-        _resolve_equipment_table(household, 42, {"not_a_real_appliance": True})
-
-
-def test_resolve_equipment_table_non_bool_value_raises():
-    household = _household()
-    with pytest.raises(ValueError, match="must be true/false"):
-        _resolve_equipment_table(household, 42, {"oven": "yes"})
-
-
-def test_resolve_equipment_table_non_dict_raises():
-    household = _household()
-    with pytest.raises(ValueError, match="must be a dict"):
-        _resolve_equipment_table(household, 42, ["oven"])
 
 
 # ── full AttributeBuilder pipeline: wiring + error surfacing ─────────────

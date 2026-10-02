@@ -17,10 +17,15 @@ import block), so existing importers are unaffected by the split.
 """
 from __future__ import annotations
 
+# The occupancy-side rules (household size, archetype defaults, service
+# capacity, residential type set) live in occupancy.demand since
+# 6.1.0+enerplanet.1 and are re-exported here for buem's importers.
+from occupancy import demand as _occupancy_demand  # type: ignore[import]
+
 # Defaults for the built-in household electricity/internal-gains profile
 # (cfg_attribute.py's module-level demo) and the "num_persons"/"year"
 # AttributeSpec defaults.
-DEFAULT_NUM_PERSONS = 4
+DEFAULT_NUM_PERSONS = int(_occupancy_demand.DEFAULT_NUM_PERSONS)
 DEFAULT_YEAR = 2018
 
 # No DEFAULT_SEED constant here by design. occupancy's `derive_default_seed()`
@@ -102,7 +107,7 @@ DEFAULT_WEATHER_PROVIDER = "merra-2"
 # is a drift guard: it fails CI if versions/v4/'s static schema enum (which,
 # unlike this runtime set, genuinely is a hand-copied snapshot) falls out of
 # sync with occupancy's actual registry.
-RESIDENTIAL_BUILDING_TYPES = frozenset({"SFH", "MFH", "TH", "AB"})
+RESIDENTIAL_BUILDING_TYPES = _occupancy_demand.RESIDENTIAL_BUILDING_TYPES
 DEFAULT_BUILDING_TYPE = "MFH"
 
 # building_type -> occupancy household archetype, used by
@@ -115,12 +120,7 @@ DEFAULT_BUILDING_TYPE = "MFH"
 # num_persons remains the dominant, more reliable signal; this table only
 # picks a plausible default occupancy *schedule shape* when nothing more
 # specific is known. Revisit with real occupancy-survey data if available.
-DEFAULT_ARCHETYPE_BY_BUILDING_TYPE: dict[str, str] = {
-    "SFH": "family_with_children",  # detached houses skew toward families in TABULA's own survey basis
-    "TH": "working_couple",  # terraced houses skew toward smaller working households
-    "MFH": "generic",  # multi-family buildings house a wide mix of composition -- no single default fits
-    "AB": "generic",  # apartment blocks: same reasoning as MFH
-}
+DEFAULT_ARCHETYPE_BY_BUILDING_TYPE: dict[str, str] = _occupancy_demand.DEFAULT_ARCHETYPE_BY_BUILDING_TYPE
 
 # Floor area per occupant [m2/person] by occupancy service-building type,
 # used to size a service building's `capacity` from its real floor area
@@ -146,33 +146,10 @@ DEFAULT_ARCHETYPE_BY_BUILDING_TYPE: dict[str, str] = {
 # 1,500 m2, clinic 750 m2, bakery 250 m2) -- so a building at its type's
 # reference size reproduces occupancy's default capacity, and only
 # buildings away from that size are rescaled.
-SERVICE_FLOOR_AREA_PER_OCCUPANT_M2: dict[str, float] = {
-    "office": 15.0,
-    "school": 5.0,
-    "restaurant": 3.0,
-    "supermarket": 10.0,
-    "hotel": 20.0,
-    "warehouse": 100.0,
-    "clinic": 15.0,
-    "bakery": 10.0,
-}
+SERVICE_FLOOR_AREA_PER_OCCUPANT_M2: dict[str, float] = _occupancy_demand.SERVICE_FLOOR_AREA_PER_OCCUPANT_M2
 
 
-def derive_service_capacity(building_type: str, floor_area_m2: float | None) -> int | None:
-    """Occupant capacity for a service building of ``floor_area_m2``.
-
-    Returns ``None`` when the type has no published density or the floor
-    area is unusable, letting occupancy apply its own
-    ``capacity_default`` rather than inventing a number.
-
-    The result is floored at 1: a building small enough to round to zero
-    occupants is still a building someone enters, and a zero capacity is
-    rejected by ``ServiceBuildingProfile`` itself.
-    """
-    density = SERVICE_FLOOR_AREA_PER_OCCUPANT_M2.get(building_type)
-    if density is None or not floor_area_m2 or floor_area_m2 <= 0:
-        return None
-    return max(1, round(float(floor_area_m2) / density))
+derive_service_capacity = _occupancy_demand.derive_service_capacity
 
 
 # Household equipment ids, hand-copied from occupancy's
