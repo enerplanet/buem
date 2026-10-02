@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+**Results change for any caller that omits the comfort band.** A
+`/api/process` request without `thermal.comfortT_lb`/`comfortT_ub` now
+runs on the model's own 18 to 21 degC band instead of 21 to 24. Heating
+falls and cooling rises for such requests; callers that send the band
+explicitly, as the enerplanet backend does, are unaffected.
+
+### Changed
+
+- The API path's default comfort band is `building_registry.DEFAULT_COMFORT_T_LB`
+  and `DEFAULT_COMFORT_T_UB` (18 and 21 degC), the same defaults the CLI
+  and the Dutch validation runs use, instead of literals of 21 and 24 in
+  the request converter. The pinned v5 contract still documents 21/24 as
+  its defaults; it is a verbatim copy and changes through buem-gateway.
+
 ## [6.5.0] - 2026-10-02
 
 **Results unchanged.** The occupancy dependency moves to the enerplanet
