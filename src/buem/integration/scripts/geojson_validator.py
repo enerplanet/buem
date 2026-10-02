@@ -24,7 +24,11 @@ from typing import Any
 import pandas as pd
 from jsonschema import Draft202012Validator
 
-from buem.config.building_registry import DEFAULT_YEAR
+from buem.config.building_registry import (
+    DEFAULT_COMFORT_T_LB,
+    DEFAULT_COMFORT_T_UB,
+    DEFAULT_YEAR,
+)
 from buem.integration.scripts.profile_file_loader import (
     load_electricity_load_values,
     load_weather_profile,
@@ -327,8 +331,10 @@ class GeoJsonValidator:
         # Extract thermal parameters
         n_air_infiltration = extract_value(thermal.get("n_air_infiltration", 0.5))
         n_air_use = extract_value(thermal.get("n_air_use", 0.5))
-        comfortT_lb = extract_value(thermal.get("comfortT_lb", 21))
-        comfortT_ub = extract_value(thermal.get("comfortT_ub", 24))
+        # The model's own band (18 to 21 degC), not the pinned contract's
+        # documented 21/24: one source of truth for every path into the solver.
+        comfortT_lb = extract_value(thermal.get("comfortT_lb", DEFAULT_COMFORT_T_LB))
+        comfortT_ub = extract_value(thermal.get("comfortT_ub", DEFAULT_COMFORT_T_UB))
         c_m = extract_value(thermal.get("c_m", 165.0))
         design_T_min = extract_value(thermal.get("design_T_min", -12.0))
         F_sh_hor = extract_value(thermal.get("F_sh_hor", 0.8))

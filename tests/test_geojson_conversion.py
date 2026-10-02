@@ -475,3 +475,20 @@ def test_synthesized_transmittance_reaches_the_solver_not_the_default():
     assert cfg["g_gl_n_Window"] != pytest.approx(0.77)   # the default is still something else
     baseline = _solar_gain_kwh(_opaque_only(_load_payload()))
     assert float(model.profiles["bQ_sol_Windows"].sum()) > baseline * 1.2
+
+
+# ── comfort band default on the API path ──────────────────────────────────
+
+def test_omitted_comfort_band_defaults_to_registry_values():
+    """A request without comfortT_lb/comfortT_ub gets the model's own
+    default band (building_registry.DEFAULT_COMFORT_T_LB/UB), the same one
+    the CLI and the Dutch validation runs use."""
+    from buem.config.building_registry import DEFAULT_COMFORT_T_LB, DEFAULT_COMFORT_T_UB
+
+    payload = _load_payload()
+    thermal = payload["features"][0]["properties"]["buem"]["building"].get("thermal", {})
+    thermal.pop("comfortT_lb", None)
+    thermal.pop("comfortT_ub", None)
+    attrs = _building_attrs(payload)
+    assert attrs["comfortT_lb"] == DEFAULT_COMFORT_T_LB
+    assert attrs["comfortT_ub"] == DEFAULT_COMFORT_T_UB
