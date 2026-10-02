@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.4.0] - 2026-10-02
+
+**Results unchanged.** Two interface changes, both opt-in or opt-out
+on the caller's side: file-based profile inputs must now lie inside
+`BUEM_DATA_DIR`, and the hourly arrays no longer come with a result
+file unless `save_timeseries_file=true` is sent.
+
 ### Changed
 
 - `include_timeseries=true` on `/api/process` returns the hourly arrays
