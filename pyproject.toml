@@ -62,21 +62,20 @@ dependencies = [
     # and no published tag names what is in use, so pinning to the latest
     # release would roll those commits back. Installs 1.9.3.dev19+g36ff059a7.
     "weather[pointquery,solar] @ git+https://github.com/UU-BUEM/weather.git@36ff059a780e1bce85e4dd170a6386f357696895",
-    # occupancy: https://github.com/UU-BUEM/occupancy -- compulsory (2026-08-07):
+    # occupancy: https://github.com/enerplanet/occupancy -- compulsory (2026-08-07):
     # all Q_ig/elecLoad/occ_nothome/occ_sleeping attributes come from this
     # package's real HouseholdProfile/ServiceBuildingProfile generation, no
-    # synthetic fallback. Not on PyPI/conda yet, so a direct git reference
-    # (PEP 508), pinned to a released tag rather than a branch so a given
-    # buem commit always resolves the same occupancy: see infrastructure/
-    # env/buem_env.yml's header comment for the reasoning, and keep the two
-    # references in step.
+    # synthetic fallback. Not on PyPI/conda, so a direct git reference
+    # (PEP 508) pinned to a tag; keep infrastructure/env/buem_env.yml's
+    # reference in step.
     #
-    # Tracks upstream directly; the enerplanet/occupancy fork pin is retired.
-    # v6.0.0 is an annotated tag, object b105a5a6847a85d8bcc82d3bd671f0ecfd3bc97e,
-    # pointing at commit f4e1adc7b3adb3f92adeacec5facb17ee8db5d89. Both are
-    # recorded because pip reports the tag object while git checks out the
-    # commit; either value changing means the tag was moved.
-    "occupancy @ git+https://github.com/UU-BUEM/occupancy.git@v6.0.0",
+    # Pinned to the enerplanet fork, not upstream UU-BUEM/occupancy: since
+    # 6.1.0+enerplanet.1 the fork carries occupancy.building_demand(), the
+    # per-building rules buem's attribute builder used to hold, so buem and
+    # the grid model size electricity from one function at one release. Fork
+    # tags are vX.Y.Z-enerplanet.N and install package version
+    # X.Y.Z+enerplanet.N.
+    "occupancy @ git+https://github.com/enerplanet/occupancy.git@v6.1.0-enerplanet.1",
 ]
 
 [project.optional-dependencies]

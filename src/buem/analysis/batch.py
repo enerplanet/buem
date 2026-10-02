@@ -248,7 +248,7 @@ def _process_one_building(building_feature_id: int, use_milp: bool) -> dict[str,
         # per-dwelling reference belongs to the aggregation step.
         attrs["residential_units"] = units
         # Selects this region's own occupants-per-dwelling rows from
-        # data/reference/num_persons_by_building_type.csv where the run
+        # occupancy's num_persons_by_building_type.csv where the run
         # names a region; None falls back to the country-wide figures.
         attrs["region_code"] = _WORKER_REGION_CODE
 
@@ -285,7 +285,7 @@ class BatchConfig:
     # Statistical region whose own occupants-per-dwelling figures apply
     # (a CBS "RegioS" code such as "GM0200" for a Dutch municipality).
     # None uses the country-wide rows -- see
-    # buem.config.reference_values.resolve_num_persons.
+    # occupancy.demand.resolve_num_persons.
     region_code: str | None = None
     # Ignored when the source carries real geometry: a CSV region derives
     # its own centre so a Netherlands run doesn't fetch German weather.

@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- The occupancy dependency is pinned to the enerplanet fork,
+  `enerplanet/occupancy@v6.1.0-enerplanet.1` (package version
+  `6.1.0+enerplanet.1`, based on upstream v6.0.0), in both
+  `pyproject.toml` and `infrastructure/env/buem_env.yml`.
+- The per-building rules around occupancy (household size by building
+  type, country and region, default archetype, service capacity from
+  floor area, blending of fractional household sizes, dwelling scaling
+  and the cooking-carrier balance) now come from
+  `occupancy.building_demand()`. `AttributeBuilder` calls it and keeps
+  only weather alignment and DHW pricing. Results are unchanged; the
+  fork's tests pin buem's previous output for nine buildings.
+
+### Removed
+
+- `buem.config.reference_values.resolve_num_persons` and
+  `data/reference/num_persons_by_building_type.csv`; the table and the
+  lookup live in occupancy. `building_registry` re-exports
+  `RESIDENTIAL_BUILDING_TYPES`, `DEFAULT_NUM_PERSONS`,
+  `DEFAULT_ARCHETYPE_BY_BUILDING_TYPE`, `SERVICE_FLOOR_AREA_PER_OCCUPANT_M2`
+  and `derive_service_capacity` from there.
+
 ## [6.4.0] - 2026-10-02
 
 **Results unchanged.** Two interface changes, both opt-in or opt-out

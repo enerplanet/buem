@@ -13,14 +13,12 @@ Two tables live here:
     DHW_DELTA_T_K`` keeps working exactly as before -- this module changes
     *where the number comes from*, not the public API).
 
-``num_persons_by_building_type.csv``
-    Occupants per dwelling, by building type and optionally country and
-    statistical region. Consulted by ``AttributeBuilder`` whenever a
-    request supplies no explicit ``num_persons``. See
-    :func:`resolve_num_persons` for the lookup order.
+Occupants per dwelling by building type, country and region moved to
+the occupancy package (``occupancy.demand``, 6.1.0+enerplanet.1)
+together with its table.
 
-Editing a value in either CSV and reimporting is sufficient; no Python
-code changes needed. Both fail loudly at load time on a broken hand-edit
+Editing a value in the CSV and reimporting is sufficient; no Python
+code changes needed. It fails loudly at load time on a broken hand-edit
 rather than silently substituting a default.
 """
 
@@ -41,7 +39,6 @@ logger = logging.getLogger(__name__)
 
 _PACKAGE = "buem.data"
 _RESOURCE = "reference/dhw_cooking_constants.csv"
-_NUM_PERSONS_RESOURCE = "reference/num_persons_by_building_type.csv"
 _GLAZING_RESOURCE = "reference/glazing_reference.csv"
 _SETBACK_RESOURCE = "reference/setback_profiles.csv"
 
@@ -343,135 +340,3 @@ def glazing_by_nearest_u(u_value: float) -> GlazingSpec:
         table.values(),
         key=lambda spec: (abs(spec.u_value - float(u_value)), spec.u_value),
     )
-
-
-@dataclass(frozen=True)
-class NumPersonsRow:
-    """One row of ``num_persons_by_building_type.csv``."""
-
-    country: str
-    region_code: str
-    building_type: str
-    num_persons: float
-    source: str
-
-
-@lru_cache(maxsize=1)
-def load_num_persons_table() -> tuple[NumPersonsRow, ...]:
-    """Load ``num_persons_by_building_type.csv`` as a tuple of rows.
-
-    Cached per process, like :func:`load_dhw_cooking_constants`. Raises
-    ``ValueError`` naming the problem if a hand-edit breaks the file's
-    expected shape, rather than silently dropping the bad row -- a
-    quietly-ignored occupancy figure would change every simulation's
-    output with no signal.
-    """
-    required = {"country", "region_code", "building_type", "num_persons"}
-    target = files(_PACKAGE).joinpath(_NUM_PERSONS_RESOURCE)
-    with target.open("r", encoding="utf-8") as handle:
-        reader = csv.DictReader(
-            (line for line in handle if not line.lstrip().startswith("#")),
-        )
-        if reader.fieldnames is None or required - set(reader.fieldnames):
-            raise ValueError(
-                f"{_NUM_PERSONS_RESOURCE} is missing required column(s) "
-                f"{sorted(required - set(reader.fieldnames or []))} "
-                f"(found: {reader.fieldnames})"
-            )
-        rows: list[NumPersonsRow] = []
-        for row in reader:
-            building_type = (row["building_type"] or "").strip()
-            try:
-                value = float(row["num_persons"])
-            except (TypeError, ValueError) as exc:
-                raise ValueError(
-                    f"{_NUM_PERSONS_RESOURCE}: row for building_type="
-                    f"{building_type!r} has a non-numeric num_persons "
-                    f"{row['num_persons']!r}"
-                ) from exc
-            if value <= 0:
-                raise ValueError(
-                    f"{_NUM_PERSONS_RESOURCE}: row for building_type="
-                    f"{building_type!r} has a non-positive num_persons {value}"
-                )
-            rows.append(NumPersonsRow(
-                country=(row["country"] or ANY).strip(),
-                region_code=(row["region_code"] or ANY).strip(),
-                building_type=building_type,
-                num_persons=value,
-                source=(row.get("source") or "").strip(),
-            ))
-    if not rows:
-        raise ValueError(f"{_NUM_PERSONS_RESOURCE} contains no data rows")
-    return tuple(rows)
-
-
-def resolve_num_persons(
-    building_type: str | None,
-    *,
-    country: str | None = None,
-    region_code: str | None = None,
-    default: float | None = None,
-) -> float | None:
-    """Occupants per dwelling for one building type, most specific first.
-
-    Lookup order, stopping at the first match:
-
-    1. exact ``(country, region_code, building_type)``
-    2. ``(country, ANY, building_type)`` -- country-wide
-    3. ``(ANY, ANY, building_type)`` -- generic per-type fallback
-    4. ``default``
-
-    so a country or region only needs rows where it genuinely differs.
-    Returns ``default`` (``None`` unless given) for an unknown or missing
-    ``building_type``, which is the correct answer for a service building:
-    its occupancy comes from ``capacity``, not from a household size.
-
-    Parameters
-    ----------
-    building_type:
-        buem's own class, e.g. ``"SFH"``. Matched case-sensitively, as
-        the CSV stores them.
-    country:
-        ISO-style country code, e.g. ``"NL"``.
-    region_code:
-        Statistical region identifier whose meaning is the country's own
-        -- a CBS ``RegioS`` municipality code such as ``"GM0200"`` for
-        the Netherlands. buem does not interpret it beyond matching.
-    """
-    if not building_type:
-        return default
-    rows = load_num_persons_table()
-    candidates = (
-        (country, region_code),
-        (country, ANY),
-        (ANY, ANY),
-    )
-    for want_country, want_region in candidates:
-        if want_country is None or want_region is None:
-            continue
-        for row in rows:
-            if (
-                row.building_type == building_type
-                and row.country == want_country
-                and row.region_code == want_region
-            ):
-                return row.num_persons
-    return default
-
-
-__all__ = [
-    "ANY",
-    "GlazingSpec",
-    "NumPersonsRow",
-    "SetbackProfile",
-    "glazing_by_nearest_u",
-    "load_dhw_cooking_constants",
-    "load_glazing_table",
-    "load_num_persons_table",
-    "load_setback_profiles",
-    "resolve_envelope_reference",
-    "resolve_glazing",
-    "resolve_num_persons",
-    "resolve_setback_profile",
-]
