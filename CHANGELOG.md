@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.3.1] - 2026-10-02
+
+**Results unchanged.** A compatibility fix only: no figure moves against
+6.3.0, because the weather commit buem pins is called exactly as before.
+
 ### Fixed
 
 - The local weather backend (`weather_cache.get_or_fetch_weather` with no
