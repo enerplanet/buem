@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.5.0] - 2026-10-02
+
+**Results unchanged.** The occupancy dependency moves to the enerplanet
+fork and the per-building rules around it move into that package; the
+request and response interfaces are unchanged.
+
 ### Changed
 
 - The occupancy dependency is pinned to the enerplanet fork,
