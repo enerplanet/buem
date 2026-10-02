@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.3.2] - 2026-10-02
+
+**Results unchanged.** Container base only. No `buem-model:6.3.1` image
+was ever published, because its build failed on the bullseye apt step
+below; 6.3.2 is the first image carrying the 6.3.1 weather fix.
+
 ### Changed
 
 - The container base image moves from `continuumio/miniconda3:24.1.2-0`
