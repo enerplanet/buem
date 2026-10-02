@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.6.0] - 2026-10-02
+
 **Results change for any caller that omits the comfort band.** A
 `/api/process` request without `thermal.comfortT_lb`/`comfortT_ub` now
 runs on the model's own 18 to 21 degC band instead of 21 to 24. Heating
