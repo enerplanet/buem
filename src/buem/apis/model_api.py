@@ -109,6 +109,8 @@ def process_payload():
       - Plain cfg JSON -> runs model once and returns heating/cooling summary (same shape as /run).
     Query param or payload flag:
       - include_timeseries=true to include full arrays in GeoJSON output (be careful with payload size).
+      - save_timeseries_file=true to also write the arrays to a gzip JSON file under
+        BUEM_RESULTS_DIR and return its /api/files path in thermal_load_profile.timeseries_file.
     """
     start = time.time()
     payload = request.get_json(force=True, silent=True)
@@ -125,7 +127,8 @@ def process_payload():
     if is_geo:
         try:
             include_ts = bool(request.args.get("include_timeseries", "false").lower() == "true") or bool(payload.get("include_timeseries", False))
-            processor = GeoJsonProcessor(payload, include_timeseries=include_ts)
+            save_file = bool(request.args.get("save_timeseries_file", "false").lower() == "true") or bool(payload.get("save_timeseries_file", False))
+            processor = GeoJsonProcessor(payload, include_timeseries=include_ts, save_timeseries_file=save_file)
             out_doc = processor.process()
             current_app.logger.info("Processed geojson payload features=%d elapsed=%.3fs", len(out_doc.get("features", [])), time.time()-start)
             return jsonify(out_doc), 200
