@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- The local weather backend (`weather_cache.get_or_fetch_weather` with no
+  `WEATHER_API_URL`) now requests `T,GHI,DHI,DNI` explicitly whenever the
+  installed `weather` package accepts a `variables` argument, which
+  weather 2.x requires and rejects a call without. The pinned
+  1.9.3.dev19 has no such argument and is called as before. Both backends
+  now share one `WEATHER_VARIABLES` constant.
+
 ## [6.3.0] - 2026-09-14
 
 **Results change again.** Figures from 6.2.0 and earlier are superseded,
