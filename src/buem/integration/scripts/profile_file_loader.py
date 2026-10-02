@@ -4,9 +4,10 @@ File-based profile loading for optional caller-supplied timeseries:
 ``versions/v4/request_schema.json``). Files are referenced by an absolute
 path expected to be reachable inside the model container -- ``BUEM_DATA_DIR``
 names the shared Docker volume where a deployment mounts client-supplied
-files (see ``buem.env.load_env()``); this module only reads/parses whatever
-path it's given, it doesn't resolve or validate that the path lives under
-that volume.
+files (see ``buem.env.load_env()``). Every path, relative or absolute, is
+resolved with symlinks followed and must stay inside that directory, must
+be a regular file and must not exceed ``MAX_PROFILE_FILE_BYTES``; without
+``BUEM_DATA_DIR`` set, file-based profiles are refused.
 
 Both loaders raise ``ValueError`` (not ``OSError``/``FileNotFoundError``)
 for read/format failures, so they surface as ordinary validation errors
@@ -18,7 +19,9 @@ from __future__ import annotations
 import gzip
 import json
 import logging
+import os
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 
@@ -31,6 +34,62 @@ logger = logging.getLogger(__name__)
 _ELEC_UNIT_TO_KWH_FACTOR = {"kWh": 1.0, "kW": 1.0, "Wh": 1e-3}
 
 REQUIRED_WEATHER_COLUMNS = ("T", "GHI", "DHI", "DNI")
+
+# An hourly year is well under 1 MiB in every supported format. Upper bound
+# on bytes read per profile file, gzip output included.
+MAX_PROFILE_FILE_BYTES = 32 * 1024 * 1024
+
+
+def _resolve_profile_path(path: str, label: str) -> Path:
+    """Resolve ``path`` to a regular file inside ``BUEM_DATA_DIR``.
+
+    Symlinks are followed before the containment check, so a link whose
+    target is outside the directory is rejected like any other path outside
+    it. Messages name the caller's own path and never the file's content.
+    """
+    base = os.environ.get("BUEM_DATA_DIR")
+    if not base:
+        raise ValueError(
+            f"{label}: file-based profiles need BUEM_DATA_DIR to be set on "
+            "this deployment."
+        )
+    base_real = os.path.realpath(base)
+    resolved = os.path.realpath(os.path.join(base_real, path))
+    if os.path.commonpath([base_real, resolved]) != base_real:
+        raise ValueError(f"{label}: path {path!r} is outside BUEM_DATA_DIR.")
+    if not os.path.isfile(resolved):
+        raise ValueError(
+            f"Could not read {label} file {path!r}: not a regular file "
+            "under BUEM_DATA_DIR."
+        )
+    if os.path.getsize(resolved) > MAX_PROFILE_FILE_BYTES:
+        raise ValueError(
+            f"{label}: file {path!r} exceeds "
+            f"{MAX_PROFILE_FILE_BYTES // (1024 * 1024)} MiB."
+        )
+    return Path(resolved)
+
+
+def _read_gzip_text(p: Path, label: str, path: str) -> str:
+    """Decompress at most ``MAX_PROFILE_FILE_BYTES`` of text."""
+    with gzip.open(p, "rt", encoding="utf-8") as fh:
+        data = fh.read(MAX_PROFILE_FILE_BYTES + 1)
+    if len(data) > MAX_PROFILE_FILE_BYTES:
+        raise ValueError(
+            f"{label}: file {path!r} exceeds "
+            f"{MAX_PROFILE_FILE_BYTES // (1024 * 1024)} MiB when decompressed."
+        )
+    return data
+
+
+def _time_index(values: Any, label: str, path: str) -> pd.DatetimeIndex:
+    """Parse timestamps without echoing the offending value."""
+    try:
+        return pd.to_datetime(values)
+    except (ValueError, TypeError) as exc:
+        raise ValueError(
+            f"Could not parse {label} file {path!r}: a timestamp is not ISO-8601."
+        ) from exc
 
 
 def load_electricity_load_values(path: str, unit: str = "kWh") -> list[float]:
@@ -46,11 +105,10 @@ def load_electricity_load_values(path: str, unit: str = "kWh") -> list[float]:
     Returns values converted to buem's own elecLoad convention (kWh, ==
     kW at hourly resolution) -- see ``_ELEC_UNIT_TO_KWH_FACTOR``.
     """
-    p = Path(path)
+    p = _resolve_profile_path(path, "electricity_load_profile")
     try:
         if p.suffix == ".gz":
-            with gzip.open(p, "rt", encoding="utf-8") as fh:
-                values = json.load(fh)
+            values = json.loads(_read_gzip_text(p, "electricity_load_profile", path))
         elif p.suffix == ".json":
             values = json.loads(p.read_text(encoding="utf-8"))
         elif p.suffix == ".csv":
@@ -61,9 +119,11 @@ def load_electricity_load_values(path: str, unit: str = "kWh") -> list[float]:
                 f"(expected .csv, .json, or .gz): {path}"
             )
     except OSError as exc:
-        raise ValueError(f"Could not read electricity_load_profile file {path!r}: {exc}") from exc
+        raise ValueError(f"Could not read electricity_load_profile file {path!r}.") from exc
     except (json.JSONDecodeError, pd.errors.ParserError) as exc:
-        raise ValueError(f"Could not parse electricity_load_profile file {path!r}: {exc}") from exc
+        raise ValueError(
+            f"Could not parse electricity_load_profile file {path!r} as {p.suffix[1:]}."
+        ) from exc
 
     if not isinstance(values, list) or not values:
         raise ValueError(
@@ -80,7 +140,7 @@ def load_electricity_load_values(path: str, unit: str = "kWh") -> list[float]:
         return [float(v) * factor for v in values]
     except (TypeError, ValueError) as exc:
         raise ValueError(
-            f"electricity_load_profile at {path!r} contains a non-numeric value: {exc}"
+            f"electricity_load_profile at {path!r} contains a non-numeric value."
         ) from exc
 
 
@@ -97,7 +157,7 @@ def load_weather_profile(path: str, fmt: str = "json") -> pd.DataFrame:
     ._fetch_remote()``'s own index-from-first-column convention for the
     parquet case, for consistency.
     """
-    p = Path(path)
+    p = _resolve_profile_path(path, "weather.profile")
     try:
         if fmt == "json":
             records = json.loads(p.read_text(encoding="utf-8"))
@@ -113,22 +173,22 @@ def load_weather_profile(path: str, fmt: str = "json") -> pd.DataFrame:
                     "have a 'time' key (ISO-8601 timestamp)."
                 )
             df = df.set_index("time")
-            df.index = pd.to_datetime(df.index)
+            df.index = _time_index(df.index, "weather.profile", path)
         elif fmt == "csv":
             df = pd.read_csv(p, index_col=0, parse_dates=True)
         elif fmt == "parquet":
             df = pd.read_parquet(p)
             df = df.set_index(df.columns[0])
-            df.index = pd.to_datetime(df.index)
+            df.index = _time_index(df.index, "weather.profile", path)
         else:
             raise ValueError(
                 f"Unsupported weather.profile format {fmt!r} "
                 "(expected 'json', 'csv', or 'parquet')."
             )
     except OSError as exc:
-        raise ValueError(f"Could not read weather.profile file {path!r}: {exc}") from exc
-    except (json.JSONDecodeError, pd.errors.ParserError, ValueError, KeyError, TypeError) as exc:
-        raise ValueError(f"Could not parse weather.profile file {path!r}: {exc}") from exc
+        raise ValueError(f"Could not read weather.profile file {path!r}.") from exc
+    except (json.JSONDecodeError, pd.errors.ParserError, KeyError, TypeError) as exc:
+        raise ValueError(f"Could not parse weather.profile file {path!r} as {fmt}.") from exc
 
     missing = set(REQUIRED_WEATHER_COLUMNS) - set(df.columns)
     if missing:

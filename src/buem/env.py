@@ -74,9 +74,9 @@ def load_env() -> None:
     #    either) is the shared volume a deployment mounts client-supplied
     #    files into, referenced by buem.inputs.electricity_load_profile.path
     #    / buem.weather.profile.path (see
-    #    buem.integration.scripts.profile_file_loader) -- purely a documented
-    #    convention for where a real deployment's absolute paths resolve;
-    #    buem itself only ever reads whatever absolute path it's given.
+    #    buem.integration.scripts.profile_file_loader). Every such path is
+    #    resolved and must stay inside it; unset, file-based profiles are
+    #    refused.
     _pkg = Path(__file__).parent
     os.environ.setdefault("BUEM_WEATHER_DIR", str(_pkg / "data" / "weather"))
     os.environ.setdefault("BUEM_RESULTS_DIR", str(_pkg / "results"))

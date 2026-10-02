@@ -27,6 +27,13 @@ project_root = Path(__file__).resolve().parent.parent
 DUMMY_DIR = project_root / "src" / "buem" / "data" / "buildings" / "dummy"
 
 
+@pytest.fixture(autouse=True)
+def _profile_files_under_data_dir(monkeypatch, tmp_path):
+    """File-based profiles must resolve inside BUEM_DATA_DIR; the tests
+    below write theirs into tmp_path."""
+    monkeypatch.setenv("BUEM_DATA_DIR", str(tmp_path))
+
+
 def _load_payload(fixture_name: str = "building_01_small_residential.json") -> dict:
     """Load a dummy fixture -- already schema-valid, including a full-year
     inline weather block."""
