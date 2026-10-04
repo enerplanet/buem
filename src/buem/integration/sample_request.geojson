@@ -20,6 +20,9 @@
         "buem": {
           "building": {
             "name": "building_001",
+            "building_type": "MFH",
+            "residential_units": 1,
+            "country": "NL",
             "A_ref": {
               "value": 100.0,
               "unit": "m2"

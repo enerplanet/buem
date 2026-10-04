@@ -19,7 +19,7 @@
         "resolution_unit": "minutes",
         "buem": {
           "building": {
-            "name": "Building 001 \u00b7 Single-family House",
+            "name": "Building 001 · Single-family House",
             "building_type": "SFH",
             "construction_period": "04",
             "country": "NL",
@@ -35,6 +35,15 @@
             "neighbour_status": "B_Alone",
             "attic_condition": "N",
             "cellar_condition": "N",
+            "cooking_carrier": "gas",
+            "include_dhw": true,
+            "residential_units": 1,
+            "num_persons": 3,
+            "archetype": "family_with_children",
+            "equipment": {
+              "dish_washer": true,
+              "tumble_dryer": false
+            },
             "envelope": {
               "elements": [
                 {
@@ -295,26 +304,17 @@
               },
               "thermal_class": "medium",
               "comfortT_lb": {
-                "value": 21,
+                "value": 18,
                 "unit": "degC"
               },
               "comfortT_ub": {
-                "value": 24,
+                "value": 21,
                 "unit": "degC"
               }
             }
           },
           "solver": {
-            "use_milp": false,
-            "compute_cooling": true,
-            "parallel_thermal": true,
-            "use_chunked_processing": true
-          },
-          "inputs": {
-            "electricity_load_profile": {
-              "path": "/data/profiles/electricity_52.4353446_5.3453464_2018.csv",
-              "unit": "kWh"
-            }
+            "use_milp": false
           },
           "weather": {
             "provider": "era5-land",
@@ -325,27 +325,154 @@
               "2018-01-01T02:00:00Z"
             ],
             "variables": {
-              "T": [
-                3.1,
-                2.8,
-                2.6
-              ],
-              "GHI": [
-                0.0,
-                0.0,
-                0.0
-              ],
-              "DHI": [
-                0.0,
-                0.0,
-                0.0
-              ],
-              "DNI": [
-                0.0,
-                0.0,
-                0.0
-              ]
+              "T": [3.1, 2.8, 2.6],
+              "GHI": [0.0, 0.0, 0.0],
+              "DHI": [0.0, 0.0, 0.0],
+              "DNI": [0.0, 0.0, 0.0]
             }
+          }
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "building_002",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          5,
+          52
+        ]
+      },
+      "properties": {
+        "start_time": "2018-01-01T00:00:00Z",
+        "end_time": "2018-12-31T23:00:00Z",
+        "resolution": "60",
+        "resolution_unit": "minutes",
+        "buem": {
+          "building": {
+            "name": "Building 002 · Office",
+            "building_type": "office",
+            "construction_period": "04",
+            "country": "NL",
+            "n_storeys": 3,
+            "A_ref": {
+              "value": 600,
+              "unit": "m2"
+            },
+            "h_room": {
+              "value": 3.0,
+              "unit": "m"
+            },
+            "neighbour_status": "B_Alone",
+            "attic_condition": "-",
+            "cellar_condition": "-",
+            "window_to_wall_ratio": 0.25,
+            "window_U": { "value": 1.8, "unit": "W/(m2K)" },
+            "window_g_gl": 0.5,
+            "door_U": { "value": 2.0, "unit": "W/(m2K)" },
+            "cooking_carrier": "none",
+            "include_dhw": false,
+            "capacity": 40,
+            "envelope": {
+              "elements": [
+                {
+                  "id": "Wall_1",
+                  "type": "wall",
+                  "area": { "value": 160, "unit": "m2" },
+                  "azimuth": { "value": 0, "unit": "deg" },
+                  "tilt": { "value": 90, "unit": "deg" },
+                  "U": { "value": 0.9, "unit": "W/(m2K)" },
+                  "b_transmission": { "value": 1, "unit": "-" }
+                },
+                {
+                  "id": "Wall_2",
+                  "type": "wall",
+                  "area": { "value": 120, "unit": "m2" },
+                  "azimuth": { "value": 180, "unit": "deg" },
+                  "tilt": { "value": 90, "unit": "deg" },
+                  "U": { "value": 0.9, "unit": "W/(m2K)" },
+                  "b_transmission": { "value": 1, "unit": "-" }
+                },
+                {
+                  "id": "Roof_1",
+                  "type": "roof",
+                  "area": { "value": 200, "unit": "m2" },
+                  "azimuth": { "value": 180, "unit": "deg" },
+                  "tilt": { "value": 0, "unit": "deg" },
+                  "U": { "value": 0.7, "unit": "W/(m2K)" }
+                },
+                {
+                  "id": "Floor_1",
+                  "type": "floor",
+                  "area": { "value": 200, "unit": "m2" },
+                  "azimuth": { "value": 0, "unit": "deg" },
+                  "tilt": { "value": 0, "unit": "deg" },
+                  "U": { "value": 0.8, "unit": "W/(m2K)" },
+                  "b_transmission": { "value": 1, "unit": "-" }
+                },
+                {
+                  "id": "Vent_1",
+                  "type": "ventilation",
+                  "air_changes": { "value": 0.6, "unit": "1/h" }
+                }
+              ]
+            },
+            "thermal": {
+              "n_air_infiltration": { "value": 0.3, "unit": "1/h" },
+              "n_air_use": { "value": 0.6, "unit": "1/h" },
+              "thermal_class": "medium",
+              "comfortT_lb": { "value": 20, "unit": "degC" },
+              "comfortT_ub": { "value": 25, "unit": "degC" }
+            }
+          },
+          "solver": {
+            "use_milp": false
+          },
+          "weather": {
+            "provider": "era5-land",
+            "year": 2018,
+            "index": [
+              "2018-01-01T00:00:00Z",
+              "2018-01-01T01:00:00Z",
+              "2018-01-01T02:00:00Z"
+            ],
+            "variables": {
+              "T": [3.1, 2.8, 2.6],
+              "GHI": [0.0, 0.0, 0.0],
+              "DHI": [0.0, 0.0, 0.0],
+              "DNI": [0.0, 0.0, 0.0]
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "building_003",
+      "geometry": { "type": "Point", "coordinates": [6.02, 52.10] },
+      "properties": {
+        "start_time": "2018-01-01T00:00:00Z",
+        "end_time": "2018-12-31T23:00:00Z",
+        "resolution": "60",
+        "resolution_unit": "minutes",
+        "buem": {
+          "building": {
+            "building_type": "MFH",
+            "country": "NL",
+            "region_code": "GM0200",
+            "A_ref": { "value": 900, "unit": "m2" },
+            "residential_units": 12,
+            "num_persons": 2,
+            "cooking_carrier": "gas",
+            "equipment": { "tumble_dryer": false, "dish_washer": true }
+          },
+          "outputs": {
+            "heating": "none",
+            "cooling": "none",
+            "electricity": "summary",
+            "hot_water": "summary",
+            "kitchen": "series"
           }
         }
       }

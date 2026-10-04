@@ -14,12 +14,10 @@ _EXAMPLE = Path(__file__).resolve().parent.parent / "src" / "buem" / "integratio
 
 @pytest.fixture
 def payload() -> dict:
-    """The pinned contract example, minus the two parts buem rejects
-    (solver.compute_cooling and the absent electricity profile file)."""
+    """The pinned contract example, first feature only: these tests count
+    one building's inline arrays and one written file."""
     p = json.loads(_EXAMPLE.read_text(encoding="utf-8"))
-    buem = p["features"][0]["properties"]["buem"]
-    buem["solver"].pop("compute_cooling", None)
-    buem.pop("inputs", None)
+    p["features"] = p["features"][:1]
     return p
 
 

@@ -28,6 +28,7 @@
             },
             "n_storeys": 4,
             "building_type": "MFH",
+            "residential_units": 1,
             "construction_period": "1995-2004",
             "country": "NL",
             "neighbour_status": "B_Alone",

@@ -15,463 +15,116 @@
       "id": "building_001",
       "geometry": {
         "type": "Point",
-        "coordinates": [
-          5.0,
-          52.0
-        ]
+        "coordinates": [5.0, 52.0]
       },
       "properties": {
         "start_time": "2018-01-01T00:00:00Z",
-        "end_time": "2018-12-31T23:00:00Z",
+        "end_time":   "2018-12-31T23:00:00Z",
         "resolution": "60",
         "resolution_unit": "minutes",
         "buem": {
           "building": {
-            "name": "Building 001 \u00b7 Single-family House",
-            "building_type": "SFH",
+            "name":                "Building 001 · Single-family House",
+            "building_type":       "SFH",
             "construction_period": "04",
-            "country": "NL",
-            "n_storeys": 2,
-            "A_ref": {
-              "value": 100.0,
-              "unit": "m2"
-            },
-            "h_room": {
-              "value": 2.5,
-              "unit": "m"
-            },
-            "neighbour_status": "B_Alone",
-            "attic_condition": "N",
-            "cellar_condition": "N",
+            "country":             "NL",
+            "n_storeys":           2,
+            "A_ref":               { "value": 100.0, "unit": "m2" },
+            "h_room":              { "value": 2.5,   "unit": "m"  },
+            "neighbour_status":    "B_Alone",
+            "attic_condition":     "N",
+            "cellar_condition":    "N",
             "envelope": {
               "elements": [
-                {
-                  "id": "Wall_1",
-                  "name": "North Wall",
-                  "type": "wall",
-                  "area": {
-                    "value": 30.0,
-                    "unit": "m2"
-                  },
-                  "azimuth": {
-                    "value": 0.0,
-                    "unit": "deg"
-                  },
-                  "tilt": {
-                    "value": 90.0,
-                    "unit": "deg"
-                  },
-                  "U": {
-                    "value": 1.6,
-                    "unit": "W/(m2K)"
-                  },
-                  "b_transmission": {
-                    "value": 1.0,
-                    "unit": "-"
-                  }
-                },
-                {
-                  "id": "Wall_2",
-                  "type": "wall",
-                  "area": {
-                    "value": 25.0,
-                    "unit": "m2"
-                  },
-                  "azimuth": {
-                    "value": 90.0,
-                    "unit": "deg"
-                  },
-                  "tilt": {
-                    "value": 90.0,
-                    "unit": "deg"
-                  },
-                  "U": {
-                    "value": 1.4,
-                    "unit": "W/(m2K)"
-                  },
-                  "b_transmission": {
-                    "value": 1.0,
-                    "unit": "-"
-                  }
-                },
-                {
-                  "id": "Wall_3",
-                  "type": "wall",
-                  "area": {
-                    "value": 30.0,
-                    "unit": "m2"
-                  },
-                  "azimuth": {
-                    "value": 180.0,
-                    "unit": "deg"
-                  },
-                  "tilt": {
-                    "value": 90.0,
-                    "unit": "deg"
-                  },
-                  "U": {
-                    "value": 1.6,
-                    "unit": "W/(m2K)"
-                  },
-                  "b_transmission": {
-                    "value": 1.0,
-                    "unit": "-"
-                  }
-                },
-                {
-                  "id": "Wall_4",
-                  "type": "wall",
-                  "area": {
-                    "value": 25.0,
-                    "unit": "m2"
-                  },
-                  "azimuth": {
-                    "value": 270.0,
-                    "unit": "deg"
-                  },
-                  "tilt": {
-                    "value": 90.0,
-                    "unit": "deg"
-                  },
-                  "U": {
-                    "value": 1.6,
-                    "unit": "W/(m2K)"
-                  },
-                  "b_transmission": {
-                    "value": 1.0,
-                    "unit": "-"
-                  }
-                },
-                {
-                  "id": "Roof_1",
-                  "type": "roof",
-                  "area": {
-                    "value": 100.0,
-                    "unit": "m2"
-                  },
-                  "azimuth": {
-                    "value": 180.0,
-                    "unit": "deg"
-                  },
-                  "tilt": {
-                    "value": 30.0,
-                    "unit": "deg"
-                  },
-                  "U": {
-                    "value": 1.2,
-                    "unit": "W/(m2K)"
-                  }
-                },
-                {
-                  "id": "Floor_1",
-                  "type": "floor",
-                  "area": {
-                    "value": 100.0,
-                    "unit": "m2"
-                  },
-                  "azimuth": {
-                    "value": 0.0,
-                    "unit": "deg"
-                  },
-                  "tilt": {
-                    "value": 0.0,
-                    "unit": "deg"
-                  },
-                  "U": {
-                    "value": 1.5,
-                    "unit": "W/(m2K)"
-                  },
-                  "b_transmission": {
-                    "value": 0.8,
-                    "unit": "-"
-                  }
-                },
-                {
-                  "id": "Win_1",
-                  "type": "window",
-                  "area": {
-                    "value": 6.0,
-                    "unit": "m2"
-                  },
-                  "azimuth": {
-                    "value": 0.0,
-                    "unit": "deg"
-                  },
-                  "tilt": {
-                    "value": 90.0,
-                    "unit": "deg"
-                  },
-                  "parent_id": "Wall_1",
-                  "U": {
-                    "value": 2.8,
-                    "unit": "W/(m2K)"
-                  },
-                  "g_gl": {
-                    "value": 0.6,
-                    "unit": "-"
-                  }
-                },
-                {
-                  "id": "Win_2",
-                  "type": "window",
-                  "area": {
-                    "value": 8.0,
-                    "unit": "m2"
-                  },
-                  "azimuth": {
-                    "value": 180.0,
-                    "unit": "deg"
-                  },
-                  "tilt": {
-                    "value": 90.0,
-                    "unit": "deg"
-                  },
-                  "parent_id": "Wall_3",
-                  "U": {
-                    "value": 2.8,
-                    "unit": "W/(m2K)"
-                  },
-                  "g_gl": {
-                    "value": 0.6,
-                    "unit": "-"
-                  }
-                },
-                {
-                  "id": "Win_3",
-                  "type": "window",
-                  "area": {
-                    "value": 4.0,
-                    "unit": "m2"
-                  },
-                  "azimuth": {
-                    "value": 90.0,
-                    "unit": "deg"
-                  },
-                  "tilt": {
-                    "value": 90.0,
-                    "unit": "deg"
-                  },
-                  "parent_id": "Wall_2",
-                  "U": {
-                    "value": 2.5,
-                    "unit": "W/(m2K)"
-                  },
-                  "g_gl": {
-                    "value": 0.6,
-                    "unit": "-"
-                  }
-                },
-                {
-                  "id": "Door_1",
-                  "type": "door",
-                  "area": {
-                    "value": 2.0,
-                    "unit": "m2"
-                  },
-                  "azimuth": {
-                    "value": 0.0,
-                    "unit": "deg"
-                  },
-                  "tilt": {
-                    "value": 90.0,
-                    "unit": "deg"
-                  },
-                  "parent_id": "Wall_1",
-                  "U": {
-                    "value": 3.0,
-                    "unit": "W/(m2K)"
-                  }
-                },
-                {
-                  "id": "Vent_1",
-                  "type": "ventilation",
-                  "air_changes": {
-                    "value": 0.5,
-                    "unit": "1/h"
-                  }
-                }
+                { "id": "Wall_1",  "name": "North Wall",  "type": "wall",        "area": { "value": 30.0,  "unit": "m2"  }, "azimuth": { "value": 0.0,   "unit": "deg" }, "tilt": { "value": 90.0, "unit": "deg" }, "U": { "value": 1.6, "unit": "W/(m2K)" }, "b_transmission": { "value": 1.0, "unit": "-" } },
+                { "id": "Wall_2",  "type": "wall",        "area": { "value": 25.0,  "unit": "m2"  }, "azimuth": { "value": 90.0,  "unit": "deg" }, "tilt": { "value": 90.0, "unit": "deg" }, "U": { "value": 1.4, "unit": "W/(m2K)" }, "b_transmission": { "value": 1.0, "unit": "-" } },
+                { "id": "Wall_3",  "type": "wall",        "area": { "value": 30.0,  "unit": "m2"  }, "azimuth": { "value": 180.0, "unit": "deg" }, "tilt": { "value": 90.0, "unit": "deg" }, "U": { "value": 1.6, "unit": "W/(m2K)" }, "b_transmission": { "value": 1.0, "unit": "-" } },
+                { "id": "Wall_4",  "type": "wall",        "area": { "value": 25.0,  "unit": "m2"  }, "azimuth": { "value": 270.0, "unit": "deg" }, "tilt": { "value": 90.0, "unit": "deg" }, "U": { "value": 1.6, "unit": "W/(m2K)" }, "b_transmission": { "value": 1.0, "unit": "-" } },
+                { "id": "Roof_1",  "type": "roof",        "area": { "value": 100.0, "unit": "m2"  }, "azimuth": { "value": 180.0, "unit": "deg" }, "tilt": { "value": 30.0, "unit": "deg" }, "U": { "value": 1.2, "unit": "W/(m2K)" } },
+                { "id": "Floor_1", "type": "floor",       "area": { "value": 100.0, "unit": "m2"  }, "azimuth": { "value": 0.0,   "unit": "deg" }, "tilt": { "value": 0.0,  "unit": "deg" }, "U": { "value": 1.5, "unit": "W/(m2K)" }, "b_transmission": { "value": 0.8, "unit": "-" } },
+                { "id": "Win_1",   "type": "window",      "area": { "value": 6.0,   "unit": "m2"  }, "azimuth": { "value": 0.0,   "unit": "deg" }, "tilt": { "value": 90.0, "unit": "deg" }, "parent_id": "Wall_1", "U": { "value": 2.8, "unit": "W/(m2K)" }, "g_gl": { "value": 0.6, "unit": "-" } },
+                { "id": "Win_2",   "type": "window",      "area": { "value": 8.0,   "unit": "m2"  }, "azimuth": { "value": 180.0, "unit": "deg" }, "tilt": { "value": 90.0, "unit": "deg" }, "parent_id": "Wall_3", "U": { "value": 2.8, "unit": "W/(m2K)" }, "g_gl": { "value": 0.6, "unit": "-" } },
+                { "id": "Win_3",   "type": "window",      "area": { "value": 4.0,   "unit": "m2"  }, "azimuth": { "value": 90.0,  "unit": "deg" }, "tilt": { "value": 90.0, "unit": "deg" }, "parent_id": "Wall_2", "U": { "value": 2.5, "unit": "W/(m2K)" }, "g_gl": { "value": 0.6, "unit": "-" } },
+                { "id": "Door_1",  "type": "door",        "area": { "value": 2.0,   "unit": "m2"  }, "azimuth": { "value": 0.0,   "unit": "deg" }, "tilt": { "value": 90.0, "unit": "deg" }, "parent_id": "Wall_1", "U": { "value": 3.0, "unit": "W/(m2K)" } },
+                { "id": "Vent_1",  "type": "ventilation", "air_changes": { "value": 0.5, "unit": "1/h" } }
               ]
             },
             "thermal": {
-              "n_air_infiltration": {
-                "value": 0.5,
-                "unit": "1/h"
-              },
-              "n_air_use": {
-                "value": 0.4,
-                "unit": "1/h"
-              },
-              "thermal_class": "medium",
-              "c_m": {
-                "value": 110.0,
-                "unit": "kJ/(m2K)"
-              },
-              "comfortT_lb": {
-                "value": 21.0,
-                "unit": "degC"
-              },
-              "comfortT_ub": {
-                "value": 24.0,
-                "unit": "degC"
-              },
-              "F_sh_hor": {
-                "value": 0.7,
-                "unit": "-"
-              },
-              "F_sh_vert": {
-                "value": 0.75,
-                "unit": "-"
-              },
-              "F_f": {
-                "value": 0.2,
-                "unit": "-"
-              },
-              "F_w": {
-                "value": 0.9,
-                "unit": "-"
-              },
-              "phi_int": {
-                "value": 3.0,
-                "unit": "W/m2"
-              },
-              "q_w_nd": {
-                "value": 12.5,
-                "unit": "kWh/(m2.a)"
-              }
+              "n_air_infiltration": { "value": 0.5,   "unit": "1/h"        },
+              "n_air_use":          { "value": 0.4,   "unit": "1/h"        },
+              "thermal_class":      "medium",
+              "c_m":                { "value": 110.0, "unit": "kJ/(m2K)"  },
+              "comfortT_lb":        { "value": 21.0,  "unit": "degC"       },
+              "comfortT_ub":        { "value": 24.0,  "unit": "degC"       },
+              "F_sh_hor":           { "value": 0.7,   "unit": "-"          },
+              "F_sh_vert":          { "value": 0.75,  "unit": "-"          },
+              "F_f":                { "value": 0.2,   "unit": "-"          },
+              "F_w":                { "value": 0.9,   "unit": "-"          },
+              "phi_int":            { "value": 3.0,   "unit": "W/m2"       },
+              "q_w_nd":             { "value": 12.5,  "unit": "kWh/(m2.a)" }
             }
           },
           "solver": {
-            "use_milp": false,
-            "compute_cooling": true,
-            "parallel_thermal": true,
-            "use_chunked_processing": true
-          },
-          "inputs": {
-            "electricity_load_profile": {
-              "path": "/data/profiles/electricity_52.4353446_5.3453464_2018.csv",
-              "unit": "kWh"
-            }
+            "use_milp": false
           },
           "thermal_load_profile": {
-            "start_time": "2018-01-01T00:00:00Z",
-            "end_time": "2018-12-31T23:00:00Z",
-            "resolution": "60",
+            "start_time":      "2018-01-01T00:00:00Z",
+            "end_time":        "2018-12-31T23:00:00Z",
+            "resolution":      "60",
             "resolution_unit": "minutes",
-            "timeseries_file": "/data/results/heating_52.4353446_5.3453464_2018.json.gz",
             "summary": {
               "heating": {
-                "total": {
-                  "value": 4823.5,
-                  "unit": "kWh"
-                },
-                "max": {
-                  "value": 7.8,
-                  "unit": "kW"
-                },
-                "min": {
-                  "value": 0.0,
-                  "unit": "kW"
-                },
-                "mean": {
-                  "value": 0.55,
-                  "unit": "kW"
-                },
-                "median": {
-                  "value": 0.0,
-                  "unit": "kW"
-                },
-                "std": {
-                  "value": 1.14,
-                  "unit": "kW"
-                }
+                "total":  { "value": 4823.5, "unit": "kWh" },
+                "max":    { "value": 7.8,    "unit": "kW"  },
+                "min":    { "value": 0.0,    "unit": "kW"  },
+                "mean":   { "value": 0.55,   "unit": "kW"  },
+                "median": { "value": 0.0,    "unit": "kW"  },
+                "std":    { "value": 1.14,   "unit": "kW"  }
               },
               "cooling": {
-                "total": {
-                  "value": 312.4,
-                  "unit": "kWh"
-                },
-                "max": {
-                  "value": 2.1,
-                  "unit": "kW"
-                },
-                "min": {
-                  "value": 0.0,
-                  "unit": "kW"
-                },
-                "mean": {
-                  "value": 0.036,
-                  "unit": "kW"
-                },
-                "median": {
-                  "value": 0.0,
-                  "unit": "kW"
-                },
-                "std": {
-                  "value": 0.21,
-                  "unit": "kW"
-                }
+                "total":  { "value": 312.4,  "unit": "kWh" },
+                "max":    { "value": 2.1,    "unit": "kW"  },
+                "min":    { "value": 0.0,    "unit": "kW"  },
+                "mean":   { "value": 0.036,  "unit": "kW"  },
+                "median": { "value": 0.0,    "unit": "kW"  },
+                "std":    { "value": 0.21,   "unit": "kW"  }
               },
               "electricity": {
-                "total": {
-                  "value": 2105.0,
-                  "unit": "kWh"
-                },
-                "max": {
-                  "value": 1.8,
-                  "unit": "kW"
-                },
-                "min": {
-                  "value": 0.05,
-                  "unit": "kW"
-                },
-                "mean": {
-                  "value": 0.24,
-                  "unit": "kW"
-                },
-                "median": {
-                  "value": 0.18,
-                  "unit": "kW"
-                },
-                "std": {
-                  "value": 0.29,
-                  "unit": "kW"
-                }
+                "total":  { "value": 2105.0, "unit": "kWh" },
+                "max":    { "value": 1.8,    "unit": "kW"  },
+                "min":    { "value": 0.05,   "unit": "kW"  },
+                "mean":   { "value": 0.24,   "unit": "kW"  },
+                "median": { "value": 0.18,   "unit": "kW"  },
+                "std":    { "value": 0.29,   "unit": "kW"  }
               },
-              "total_energy_demand": {
-                "value": 7240.9,
-                "unit": "kWh"
+              "hot_water": {
+                "total":  { "value": 1840.2, "unit": "kWh" },
+                "max":    { "value": 3.2,    "unit": "kW"  },
+                "min":    { "value": 0.0,    "unit": "kW"  },
+                "mean":   { "value": 0.21,   "unit": "kW"  },
+                "median": { "value": 0.05,   "unit": "kW"  },
+                "std":    { "value": 0.38,   "unit": "kW"  }
               },
-              "peak_heating_load": {
-                "value": 7.8,
-                "unit": "kW"
+              "kitchen": {
+                "total":  { "value": 386.1,  "unit": "kWh_gas" },
+                "max":    { "value": 1.1,    "unit": "kW_gas"  },
+                "min":    { "value": 0.0,    "unit": "kW_gas"  },
+                "mean":   { "value": 0.044,  "unit": "kW_gas"  },
+                "median": { "value": 0.0,    "unit": "kW_gas"  },
+                "std":    { "value": 0.09,   "unit": "kW_gas"  }
               },
-              "peak_cooling_load": {
-                "value": 2.1,
-                "unit": "kW"
-              },
-              "energy_intensity": {
-                "value": 72.4,
-                "unit": "kWh/m2"
-              }
+              "total_energy_demand": { "value": 9081.1, "unit": "kWh"    },
+              "peak_heating_load":   { "value": 7.8,    "unit": "kW"     },
+              "peak_cooling_load":   { "value": 2.1,    "unit": "kW"     },
+              "energy_intensity":    { "value": 72.4,   "unit": "kWh/m2" }
             }
           },
           "model_metadata": {
-            "model_version": "BUEM-v4.0",
-            "solver_used": "scipy-sparse",
-            "processing_time": {
-              "value": 3.12,
-              "unit": "s"
-            },
-            "weather_year": 2018,
-            "simulations_run": [
-              "heating",
-              "cooling",
-              "electricity"
-            ],
-            "electricity_source": "client_provided",
-            "parallel_thermal": true,
-            "use_chunked_processing": true,
-            "validation_warnings": []
+            "model_version":          "BUEM-v4.0",
+            "solver_used":            "scipy-sparse",
+            "processing_time":        { "value": 3.12, "unit": "s" },
+            "weather_year":           2018,
+            "validation_warnings":    []
           }
         }
       }

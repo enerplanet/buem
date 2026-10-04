@@ -63,30 +63,24 @@ def test_valid_service_building_type_passes():
     assert attrs["building_type"] == "office"
 
 
-def test_unrecognised_building_type_passes_validation_fails_later():
-    """The pinned contract leaves building_type free text -- an
-    unrecognised value passes request validation (nothing here to reject
-    it) and only fails once AttributeBuilder tries to resolve an
-    occupancy profile from it."""
+def test_unrecognised_building_type_rejected_by_contract():
+    """The pinned contract enumerates building_type, so an unrecognised
+    value is rejected at request validation, naming the value."""
     payload = _load_payload()
     payload["features"][0]["properties"]["buem"]["building"]["building_type"] = "not_a_real_type"
-    attrs = _building_attrs(payload)
-    assert attrs["building_type"] == "not_a_real_type"
-
-    # generate_electricity_profile() wraps the underlying ValueError in a
-    # RuntimeError (see attribute_builder.py) -- the message still names
-    # the offending value.
-    with pytest.raises(RuntimeError, match="not_a_real_type"):
-        AttributeBuilder(payload_attrs=attrs).build()
+    result = validate_geojson_request(payload)
+    assert not result.is_valid
+    assert any("not_a_real_type" in str(e.message) for e in result.get_errors())
 
 
-def test_missing_building_type_still_passes():
-    """building_type stays optional -- absence is not an error;
-    AttributeBuilder's own default applies."""
+def test_missing_building_type_rejected_by_contract():
+    """building_type is required by the pinned contract; nothing defaults
+    it silently any more."""
     payload = _load_payload()
     del payload["features"][0]["properties"]["buem"]["building"]["building_type"]
-    attrs = _building_attrs(payload)
-    assert "building_type" not in attrs
+    result = validate_geojson_request(payload)
+    assert not result.is_valid
+    assert any("building_type" in str(e.message) for e in result.get_errors())
 
 
 # ── buem.weather: index/variables required, provider/year forwarded as metadata ──
@@ -259,7 +253,9 @@ def test_compute_cooling_true_rejected():
     payload["features"][0]["properties"]["buem"]["solver"] = {"compute_cooling": True}
     result = validate_geojson_request(payload)
     assert not result.is_valid
-    assert any("compute_cooling" in str(e.message) for e in result.get_errors())
+    # The pinned contract fixes compute_cooling to false, so the schema
+    # rejects true at its path before the domain check runs.
+    assert any("compute_cooling" in f"{e.path} {e.message}" for e in result.get_errors())
 
 
 def test_compute_cooling_false_is_not_rejected():

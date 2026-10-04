@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://buem.energy/schemas/contract/v5/response",
-  "title": "BUEM GeoJSON Response Schema (API contract v5)",
-  "description": "Response schema for the BUEM building energy model. Echoes the request structure and adds thermal_load_profile and model_metadata to each feature's buem node. All output quantities carry explicit unit fields. Timeseries arrays declare their unit once at the array level.",
+  "$id": "https://buem.energy/schemas/contract/v6-draft/response",
+  "title": "BUEM GeoJSON Response Schema (API contract v6-draft)",
+  "description": "Response schema for the BUEM building energy model. Echoes the request structure and adds thermal_load_profile and model_metadata to each feature's buem node. All output quantities carry explicit unit fields. Timeseries arrays declare their unit once at the array level. Draft, not yet promoted \u2014 see v6-draft-contract-backlog for open items, including this file's own hot_water/kitchen additions below.",
   "type": "object",
   "required": [
     "type",
@@ -217,17 +217,13 @@
         },
         "timeseries_file": {
           "type": "string",
-          "description": "Path to the output timeseries file on the shared Docker volume ($DATA_DIR/results/). Named after the building centroid coordinates: {profile_type}_{lat}_{lon}_{year}.json.gz \u2014 e.g. heating_48.833911_12.957720_2018.json.gz. See NAMING.md for the full convention."
+          "description": "Path of the intermediate .json.gz file buem-model writes when the request sets save_timeseries_file (buem-model 6.4.0 and later). buem-gateway never requests the file, so its responses do not carry this field."
         }
       }
     },
     "load_summary": {
       "type": "object",
-      "required": [
-        "heating",
-        "electricity"
-      ],
-      "description": "Aggregated statistics over the full simulation period. heating and electricity are always present. cooling is present only when compute_cooling was true in the request solver.",
+      "description": "Aggregated statistics over the full simulation period, one entry per profile the request selected (outputs set to summary or series; every profile when outputs is omitted). A selected profile buem-model cannot produce is reported as all-zero rather than left out: hot_water and kitchen for service building_type, kitchen with electric cooking. peak_heating_load is present when heating is selected and peak_cooling_load when cooling is selected. total_energy_demand is present only when heating, cooling, electricity and hot_water are all selected.",
       "properties": {
         "heating": {
           "$ref": "#/$defs/energy_summary"
@@ -238,13 +234,29 @@
         "electricity": {
           "$ref": "#/$defs/energy_summary"
         },
+        "hot_water": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/energy_summary"
+            }
+          ],
+          "description": "Domestic hot water useful-heat DEMAND \u2014 fuel-agnostic (what the building's systems must deliver, same family as heating/cooling), not literal delivered energy of any one carrier. Included in total_energy_demand below. All-zero for a service building_type (bakery, clinic, hotel, office, restaurant, school, supermarket, warehouse) \u2014 BuEM has no hot water model for service buildings, regardless of include_dhw."
+        },
+        "kitchen": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/gas_energy_summary"
+            }
+          ],
+          "description": "Estimated cooking GAS energy \u2014 literal delivered gas (a national heating:cooking ratio proxy, not metered or physically modelled), not a fuel-agnostic demand figure like hot_water. A different fuel carrier from every other field in this summary, marked with its own kWh_gas/kW_gas units for that reason. NOT included in total_energy_demand below \u2014 folding a gas quantity into an otherwise thermal/electric total remains an open question. All-zero for a service building_type (bakery, clinic, hotel, office, restaurant, school, supermarket, warehouse) \u2014 BuEM has no cooking model for service buildings, regardless of cooking_carrier."
+        },
         "total_energy_demand": {
           "allOf": [
             {
               "$ref": "#/$defs/energy_qty"
             }
           ],
-          "description": "Total heating + cooling + electricity demand over the simulation period"
+          "description": "Sum of heating, cooling, electricity and hot_water over the simulation period, present only when all four are selected so that it always means the same quantity. Does not include kitchen, see its own description."
         },
         "peak_heating_load": {
           "allOf": [
@@ -268,7 +280,7 @@
               "$ref": "#/$defs/energy_intensity_qty"
             }
           ],
-          "description": "Total energy demand per reference floor area"
+          "description": "total_energy_demand divided by building.A_ref. Present when total_energy_demand is present."
         }
       }
     },
@@ -332,15 +344,73 @@
         }
       }
     },
+    "gas_energy_summary": {
+      "type": "object",
+      "required": [
+        "total",
+        "max",
+        "min",
+        "mean"
+      ],
+      "description": "Statistical summary for a GAS energy carrier over the simulation period \u2014 same shape as energy_summary, but the quantities carry gas-specific units (kWh_gas/kW_gas) so a consumer can never mistake this for electric or thermal energy.",
+      "properties": {
+        "total": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/gas_energy_qty"
+            }
+          ],
+          "description": "Total gas energy over the simulation period"
+        },
+        "max": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/gas_power_qty"
+            }
+          ],
+          "description": "Peak instantaneous gas power"
+        },
+        "min": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/gas_power_qty"
+            }
+          ],
+          "description": "Minimum instantaneous gas power"
+        },
+        "mean": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/gas_power_qty"
+            }
+          ],
+          "description": "Mean gas power over the simulation period"
+        },
+        "median": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/gas_power_qty"
+            }
+          ],
+          "description": "Median gas power over the simulation period"
+        },
+        "std": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/gas_power_qty"
+            }
+          ],
+          "description": "Standard deviation of gas power over the simulation period"
+        }
+      }
+    },
     "load_timeseries": {
       "type": "object",
       "required": [
         "unit",
-        "timestamps",
-        "heating",
-        "electricity"
+        "timestamps"
       ],
-      "description": "Hourly timeseries arrays \u2014 only present when ?include_timeseries=true is passed to the endpoint. Unit applies to all load arrays. cooling is present only when compute_cooling was true in the request solver.",
+      "description": "Hourly timeseries arrays, one per profile the request set to series. unit applies to every array except kitchen, which is gas and carries its own kitchen_unit (same electric/thermal-vs-gas split as load_summary's energy_summary vs gas_energy_summary). kitchen is present only with gas cooking.",
       "properties": {
         "unit": {
           "type": "string",
@@ -350,7 +420,17 @@
             "MW"
           ],
           "default": "kW",
-          "description": "Unit for all load arrays (heating, cooling, electricity)"
+          "description": "Unit for the heating, cooling, electricity, and hot_water arrays"
+        },
+        "kitchen_unit": {
+          "type": "string",
+          "enum": [
+            "kW_gas",
+            "W_gas",
+            "MW_gas"
+          ],
+          "default": "kW_gas",
+          "description": "Unit for the kitchen array specifically \u2014 gas, never electric or thermal. Present whenever kitchen is."
         },
         "timestamps": {
           "type": "array",
@@ -380,6 +460,20 @@
             "type": "number"
           },
           "description": "Electricity consumption at each time step"
+        },
+        "hot_water": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "description": "Domestic hot water useful-heat energy at each time step. All-zero for a service building_type \u2014 see load_summary.hot_water."
+        },
+        "kitchen": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "description": "Estimated gas-cooking power at each time step \u2014 see kitchen_unit above, not unit. All-zero for a service building_type \u2014 see load_summary.kitchen."
         }
       }
     },
@@ -387,6 +481,48 @@
       "type": "object",
       "description": "Diagnostic information about the model run",
       "properties": {
+        "resolved_inputs": {
+          "type": "object",
+          "description": "The occupancy inputs buem-model actually used for this building, after applying defaults. A field that does not apply to the building_type is null.",
+          "properties": {
+            "building_type": {
+              "type": "string"
+            },
+            "country": {
+              "type": "string"
+            },
+            "region_code": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "num_persons": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "description": "Occupants per dwelling; a fractional value is the statistical mean buem-model blended from two household sizes. null for service building_type."
+            },
+            "residential_units": {
+              "type": "number"
+            },
+            "archetype": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Household archetype. null for service building_type."
+            },
+            "capacity": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "description": "Occupant capacity. null for residential building_type."
+            }
+          }
+        },
         "model_version": {
           "type": "string",
           "description": "BUEM model version used"
@@ -406,34 +542,6 @@
         "weather_year": {
           "type": "integer",
           "description": "Calendar year of the weather data used"
-        },
-        "simulations_run": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "enum": [
-              "heating",
-              "cooling",
-              "electricity"
-            ]
-          },
-          "description": "Load types that were computed in this model run. heating and electricity are always present. cooling is present only when compute_cooling was true in the request."
-        },
-        "electricity_source": {
-          "type": "string",
-          "enum": [
-            "model_generated",
-            "client_provided"
-          ],
-          "description": "Whether the electricity load profile was generated by the occupancy model or supplied by the client in inputs.electricity_load_profile"
-        },
-        "parallel_thermal": {
-          "type": "boolean",
-          "description": "Whether heating and cooling were run in parallel"
-        },
-        "use_chunked_processing": {
-          "type": "boolean",
-          "description": "Whether chunked processing was used"
         },
         "validation_warnings": {
           "type": "array",
@@ -496,6 +604,45 @@
         }
       }
     },
+    "gas_energy_qty": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/measurement"
+        }
+      ],
+      "description": "Same as energy_qty but explicitly the gas fuel carrier, never electric or thermal.",
+      "properties": {
+        "value": {
+          "minimum": 0
+        },
+        "unit": {
+          "enum": [
+            "kWh_gas",
+            "MWh_gas",
+            "Wh_gas"
+          ],
+          "default": "kWh_gas"
+        }
+      }
+    },
+    "gas_power_qty": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/measurement"
+        }
+      ],
+      "description": "Same as power_qty but explicitly the gas fuel carrier, never electric or thermal.",
+      "properties": {
+        "unit": {
+          "enum": [
+            "kW_gas",
+            "W_gas",
+            "MW_gas"
+          ],
+          "default": "kW_gas"
+        }
+      }
+    },
     "energy_intensity_qty": {
       "allOf": [
         {
@@ -536,5 +683,5 @@
       }
     }
   },
-  "$comment": "Pinned copy of enerplanet/buem-gateway@v6.0.0 schemas/v5/response_schema.json. Do not edit here -- re-sync via contract.txt to update."
+  "$comment": "Pinned copy of enerplanet/buem-gateway@ce5d6db51928718c5bd3fb26d7567abc233be998 schemas/v6-draft/response_schema.json. Do not edit here -- re-sync via contract.txt to update."
 }
