@@ -404,12 +404,11 @@ class GeoJsonValidator:
             if key in building:
                 building_attributes[key] = extract_value(building[key])
 
-        # Weather source metadata (buem.weather.provider/year) -- passed
-        # through for record-keeping; the pinned contract requires
-        # buem.weather.index/variables on every request (weather is
-        # resolved by the caller, never by buem on this path -- see
-        # enerplanet/buem#10), so these are informational only and are
-        # not used to select an archive here.
+        # Weather source metadata (buem.weather.provider/year), passed
+        # through for record-keeping. The contract delivers weather inline
+        # (buem.weather.index/variables) whenever a request needs it, and
+        # buem resolves none on this path (enerplanet/buem#10), so these
+        # never select an archive here.
         weather_block = buem_data.get("weather") or {}
         resolved_year = None
         if isinstance(weather_block, dict) and weather_block.get("year") is not None:
@@ -419,8 +418,9 @@ class GeoJsonValidator:
             building_attributes["weather_provider"] = weather_block["provider"]
 
         # Caller-supplied inline weather timeseries (buem.weather.index +
-        # .variables) -- the shape weather serve's GET .../point?format=json
-        # returns, and required by the pinned contract on every request.
+        # .variables), the shape weather serve's GET .../point?format=json
+        # returns. Absent only for a request that selects neither heating
+        # nor cooling.
         inline_weather = self._weather_from_payload(weather_block if isinstance(weather_block, dict) else None)
         if inline_weather is not None:
             building_attributes["weather"] = inline_weather
