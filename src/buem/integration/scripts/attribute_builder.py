@@ -92,10 +92,22 @@ class AttributeBuilder:
         self.db_fetcher = db_fetcher
         self.merged_attrs: dict[str, Any] = {}
         self._provided_keys: set[str] = set()
+        # The occupancy inputs actually used after defaults, for
+        # model_metadata.resolved_inputs; None where a field does not
+        # apply to the building type.
+        self.resolved_inputs: dict[str, Any] = {}
 
-    def build(self) -> dict[str, Any]:
+    def build(self, thermal: bool = True) -> dict[str, Any]:
         """
         Build complete attribute dictionary.
+
+        Parameters
+        ----------
+        thermal : bool, optional
+            False for a request that selects neither heating nor cooling:
+            no weather is fetched, the envelope is not required and the
+            cfg is not validated for a solve. The occupancy-derived
+            profiles then follow the request's own year.
 
         Returns
         -------
@@ -112,7 +124,8 @@ class AttributeBuilder:
 
         # Step 2: Refuse to silently model the generic example house in place
         # of a real building the caller forgot to fully specify.
-        missing_required = [k for k in REQUIRED_FROM_CALLER if k not in self._provided_keys]
+        required = REQUIRED_FROM_CALLER if thermal else tuple(k for k in REQUIRED_FROM_CALLER if k != "components")
+        missing_required = [k for k in required if k not in self._provided_keys]
         if missing_required:
             raise ValueError(
                 f"Missing required building attributes (not supplied via payload "
@@ -121,7 +134,12 @@ class AttributeBuilder:
             )
 
         # Step 3: Fetch a location-specific weather DataFrame (unless opted out)
-        self.generate_weather_profile()
+        if thermal:
+            self.generate_weather_profile()
+        elif not self.merged_attrs.get("use_provided_weather", False):
+            # Drop the module-default frame so the profiles follow the
+            # request's year instead of the default frame's.
+            self.merged_attrs["weather"] = None
 
         # Step 4: Generate electricity profile (unless opted out)
         self.generate_electricity_profile()
@@ -130,9 +148,10 @@ class AttributeBuilder:
         self.align_timeseries()
 
         # Step 6: Validate complete config
-        issues = validate_cfg(self.merged_attrs)
-        if issues:
-            raise ValueError(f"Attribute validation failed: {'; '.join(issues)}")
+        if thermal:
+            issues = validate_cfg(self.merged_attrs)
+            if issues:
+                raise ValueError(f"Attribute validation failed: {'; '.join(issues)}")
 
         return self.merged_attrs
     
@@ -228,7 +247,7 @@ class AttributeBuilder:
 
         weather_df = self.merged_attrs.get("weather", ATTRIBUTE_SPECS["weather"].default)
         has_weather = isinstance(weather_df, pd.DataFrame) and not weather_df.empty
-        weather_year = int(weather_df.index[0].year) if has_weather else int(ATTRIBUTE_SPECS["year"].default)
+        weather_year = int(weather_df.index[0].year) if has_weather else int(self.merged_attrs["year"])
         building_type = self.merged_attrs.get("building_type", ATTRIBUTE_SPECS["building_type"].default)
         residential = building_type in RESIDENTIAL_BUILDING_TYPES
 
@@ -257,6 +276,16 @@ class AttributeBuilder:
                 elec_load=provided_elec_load,
                 cooking_heat_gain_fraction=dhw_cooking.COOKING_HEAT_GAIN_FRACTION,
             )
+
+            self.resolved_inputs = {
+                "building_type": demand.building_type,
+                "country": self.merged_attrs.get("country"),
+                "region_code": self.merged_attrs.get("region_code"),
+                "num_persons": demand.num_persons,
+                "residential_units": demand.residential_units,
+                "archetype": demand.archetype,
+                "capacity": demand.capacity,
+            }
 
             if not demand.elec_load_as_gain:
                 # occupancy folded the service type's equipment and lighting

@@ -8,11 +8,19 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from buem.integration.scripts.geojson_processor import GeoJsonProcessor
+from buem.integration.scripts.geojson_processor import PROFILES, GeoJsonProcessor
 
 
 def _processor(include_timeseries: bool = False) -> GeoJsonProcessor:
     return GeoJsonProcessor(payload={}, include_timeseries=include_timeseries)
+
+
+def _profiles(heating, cooling, electricity, hot_water, kitchen) -> dict:
+    return dict(zip(PROFILES, (heating, cooling, electricity, hot_water, kitchen), strict=True))
+
+
+SUMMARY = dict.fromkeys(PROFILES, "summary")
+SERIES = dict.fromkeys(PROFILES, "series")
 
 
 def test_hot_water_folded_in_kitchen_excluded_from_total():
@@ -29,7 +37,7 @@ def test_hot_water_folded_in_kitchen_excluded_from_total():
     kitchen = np.array([0.1, 0.1, 0.1])
 
     profile = proc._build_thermal_load_profile(
-        times, heating, cooling, electricity, hot_water, kitchen, 0.01,
+        times, _profiles(heating, cooling, electricity, hot_water, kitchen), SUMMARY, 0.01,
         None, None, "60", "minutes",
     )
     summary = profile["summary"]
@@ -47,7 +55,7 @@ def test_timeseries_includes_hot_water_and_kitchen_with_gas_unit_marker():
     times = pd.date_range("2018-01-01", periods=2, freq="h")
     zeros = np.zeros(2)
     profile = proc._build_thermal_load_profile(
-        times, zeros, zeros, zeros, np.array([1.0, 2.0]), np.array([3.0, 4.0]),
+        times, _profiles(zeros, zeros, zeros, np.array([1.0, 2.0]), np.array([3.0, 4.0])), SERIES,
         0.01, None, None, "60", "minutes",
     )
     ts = profile["timeseries"]
@@ -65,7 +73,7 @@ def test_missing_hot_water_and_kitchen_report_as_zero():
     zeros = np.zeros(2)
     empty = np.array([])
     profile = proc._build_thermal_load_profile(
-        times, zeros, zeros, zeros, empty, empty, 0.01, None, None, "60", "minutes",
+        times, _profiles(zeros, zeros, zeros, empty, empty), SUMMARY, 0.01, None, None, "60", "minutes",
     )
     summary = profile["summary"]
     assert summary["hot_water"]["total"]["value"] == 0.0

@@ -28,6 +28,7 @@
             },
             "n_storeys": 1,
             "building_type": "AB",
+            "residential_units": 1,
             "construction_period": "1985-1994",
             "country": "NL",
             "neighbour_status": "B_Alone",

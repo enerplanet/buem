@@ -7,6 +7,66 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+**Breaking: the pinned contract moves from buem-gateway `schemas/v5`
+(tag v6.0.0) to `schemas/v6-draft` (commit ce5d6db).** Every request must
+now carry `building.building_type` (one of SFH, MFH, TH, AB, bakery,
+clinic, hotel, office, restaurant, school, supermarket, warehouse),
+`building.country` and `building.A_ref`; MFH and AB must carry
+`residential_units`, now an integer; service types may not carry
+`equipment`, `num_persons`, `archetype` or `region_code`, and their
+`residential_units` must be 1. `building.envelope` and `buem.weather` are
+required only when heating or cooling is selected. Requests that relied
+on the silent defaults (MFH, NL, 100 m2) are rejected until they say so
+explicitly.
+
+### Added
+
+- `buem.outputs` on `/api/process`: `none`, `summary` or `series` per
+  profile (`heating`, `cooling`, `electricity`, `hot_water`, `kitchen`),
+  `summary` when omitted. A profile set to `none` is left out of the
+  response and arrays appear only for `series`. `outputs` takes
+  precedence over `include_timeseries`, which keeps meaning "series for
+  everything" when `outputs` is absent. `total_energy_demand` appears
+  only when heating, cooling, electricity and hot_water are all selected,
+  so it always means the same sum; `peak_heating_load` and
+  `peak_cooling_load` follow their own profile.
+- Occupancy-only requests: with `heating` and `cooling` both `none`, buem
+  fetches no weather, needs no envelope and runs no solve. Electricity,
+  hot_water and kitchen come from the occupancy generation alone and
+  match a full run with the same inputs and year on an on-the-hour
+  weather index. With weather stamps off the hour (hh:30), the full run's
+  nearest-hour alignment pairs each stamp with the following occupancy
+  hour, dropping the year's first hour and counting its last twice, so
+  the full run's annual electricity and hot_water differ from the
+  occupancy-only figures by that one boundary hour. The pinned contract
+  (v5) still requires `envelope` and `weather`, so such requests pass
+  validation only once the pin moves to buem-gateway's `schemas/v6-draft`.
+- `model_metadata.resolved_inputs`: the occupancy inputs actually used
+  after defaults (`building_type`, `country`, `region_code`,
+  `num_persons`, `residential_units`, `archetype`, `capacity`), null
+  where a field does not apply to the building type.
+- `summary.energy_intensity`: `total_energy_demand` divided by `A_ref`,
+  present whenever `total_energy_demand` is.
+
+### Changed
+
+- `src/buem/integration/json_schema/` is re-synced to buem-gateway commit
+  ce5d6db51928718c5bd3fb26d7567abc233be998, `schemas/v6-draft`;
+  `contract.txt`'s `tag=` field now takes a tag or a commit SHA. The
+  bundled demo buildings 05 and 07 and `sample_request.geojson` gain the
+  fields the contract now requires, with the values they were modelled
+  with by default before.
+- The rules for what DHW and gas-cooking energy a run reports
+  (`include_dhw`, gas carrier only) live in
+  `buem.thermal.dhw_cooking.reported_dhw_kwh` and
+  `reported_cooking_gas_kwh`; `ModelBUEM._addDhwCooking` delegates to them.
+
+### Fixed
+
+- `AttributeBuilder.generate_electricity_profile` used the module default
+  year (2018) instead of the request's year when no weather frame was
+  present.
+
 ## [6.6.0] - 2026-10-02
 
 **Results change for any caller that omits the comfort band.** A

@@ -19,8 +19,31 @@ from buem.integration.scripts.attribute_builder import AttributeBuilder
 from buem.integration.scripts.geojson_validator import create_validation_report, validate_geojson_request
 from buem.integration.scripts.result_cache import compute_cfg_hash, get_cached_result, store_result
 from buem.main import run_model
+from buem.thermal import dhw_cooking
 
 logger = logging.getLogger(__name__)
+
+PROFILES = ("heating", "cooling", "electricity", "hot_water", "kitchen")
+OUTPUT_LEVELS = ("none", "summary", "series")
+
+
+def resolve_outputs(buem: dict[str, Any], include_timeseries: bool) -> dict[str, str]:
+    """Output level per profile from the request's ``buem.outputs``.
+
+    ``outputs`` wins when present, with ``summary`` for any profile it
+    leaves out. Without it, ``include_timeseries`` selects ``series`` for
+    every profile and ``summary`` otherwise.
+    """
+    outputs = buem.get("outputs")
+    if not isinstance(outputs, dict):
+        return dict.fromkeys(PROFILES, "series" if include_timeseries else "summary")
+    selection = {}
+    for name in PROFILES:
+        level = outputs.get(name, "summary")
+        if level not in OUTPUT_LEVELS:
+            raise ValueError(f"outputs.{name} must be one of {OUTPUT_LEVELS}, got {level!r}")
+        selection[name] = level
+    return selection
 
 
 class GeoJsonProcessor:
@@ -41,7 +64,8 @@ class GeoJsonProcessor:
         GeoJSON FeatureCollection or single Feature.
     include_timeseries : bool, optional
         Include the hourly arrays inline in each feature's
-        thermal_load_profile.timeseries (default: False).
+        thermal_load_profile.timeseries (default: False). A feature's own
+        ``buem.outputs`` takes precedence, see :func:`resolve_outputs`.
     save_timeseries_file : bool, optional
         Write the hourly arrays to a gzip JSON file under result_save_dir
         and return its download path in thermal_load_profile.timeseries_file
@@ -189,6 +213,8 @@ class GeoJsonProcessor:
         buem = props.setdefault("buem", {})
         building_id = feature.get("id")
         payload_attrs = buem.get("building_attributes", {})
+        selection = resolve_outputs(buem, self.include_timeseries)
+        thermal = selection["heating"] != "none" or selection["cooling"] != "none"
 
         # Default the weather-fetch year to the request's own simulation
         # period (already required on every request) rather than always
@@ -198,72 +224,41 @@ class GeoJsonProcessor:
             payload_attrs = dict(payload_attrs)
             payload_attrs["year"] = pd.Timestamp(props["start_time"]).year
 
-        # Log feature processing start
         logger.info(f"Processing feature {building_id}")
 
-        # Build complete attributes
         builder = AttributeBuilder(
             payload_attrs=payload_attrs,
             building_id=building_id,
             db_fetcher=self.db_fetcher,
         )
-        merged_attrs = builder.build()
-
-        # Convert to model config
-        cfg = CfgBuilding(merged_attrs).to_cfg_dict()
-
-        # Run thermal model (single-pass LP solver, CLARABEL)
-        # Check result cache first — identical configs produce identical outputs.
-        use_milp = bool(buem.get("use_milp", False))
-        cache_key = compute_cfg_hash(cfg)
-        cached = get_cached_result(cache_key)
+        merged_attrs = builder.build(thermal=thermal)
 
         start = time.time()
-        if cached is not None:
-            res = cached
-            elapsed = time.time() - start
-            logger.info(f"Cache hit for feature {building_id} (key={cache_key[:12]}…)")
+        if thermal:
+            use_milp = bool(buem.get("use_milp", False))
+            times, profiles = self._run_thermal(merged_attrs, use_milp, building_id)
+            solver_used = "MILP" if use_milp else "LP (CLARABEL)"
         else:
-            res = run_model(cfg, plot=False, use_milp=use_milp)
-            elapsed = time.time() - start
-            store_result(cache_key, res)
+            times, profiles = self._occupancy_only(merged_attrs)
+            solver_used = "none (occupancy only)"
+        elapsed = time.time() - start
 
-        # Extract results with validation
-        times = res.get("times", [])
-        heating = self._validate_array(res.get("heating", []), "heating")
-        cooling = self._validate_array(res.get("cooling", []), "cooling")
-
-        # Electricity: prefer model output, else use cfg elecLoad
-        if "electricity" in res:
-            electricity = self._validate_array(res["electricity"], "electricity")
-        else:
-            elec_cfg = cfg.get("elecLoad")
-            if isinstance(elec_cfg, pd.Series):
-                electricity = self._validate_array(elec_cfg.values, "electricity")
-            else:
-                electricity = self._validate_array(elec_cfg or [], "electricity")
-
-        # DHW/cooking_gas: absent from res (like electricity above) when the
-        # request carried no dhw_liters/cooking_active occupancy signal --
-        # a service building, or residential input missing that detail.
-        dhw = self._validate_array(res.get("dhw", []), "dhw")
-        cooking_gas = self._validate_array(res.get("cooking_gas", []), "cooking_gas")
-
-        # Build comprehensive thermal load profile
         profile = self._build_thermal_load_profile(
-            times, heating, cooling, electricity, dhw, cooking_gas, elapsed,
+            times, profiles, selection, elapsed,
             props.get("start_time"), props.get("end_time"),
-            props.get("resolution", "60"), props.get("resolution_unit", "minutes")
+            props.get("resolution", "60"), props.get("resolution_unit", "minutes"),
+            a_ref=float(merged_attrs["A_ref"]),
         )
 
-        # Add model metadata -- a sibling of thermal_load_profile directly
+        # Model metadata -- a sibling of thermal_load_profile directly
         # under buem (per response_schema.json's `buem` $def and the
         # gateway's ResponseBlock struct), not nested inside profile.
         buem["model_metadata"] = {
             "model_version": "BUEM-v3.0",
-            "solver_used": "MILP" if use_milp else "LP (CLARABEL)",
+            "solver_used": solver_used,
             "processing_time": {"value": round(elapsed, 3), "unit": "s"},
-            "weather_year": int(getattr(cfg.get("weather", pd.DataFrame()).index, "year", [2018])[0]) if hasattr(cfg.get("weather", pd.DataFrame()).index, "year") else 2018,
+            "weather_year": int(merged_attrs["year"]),
+            "resolved_inputs": builder.resolved_inputs,
             "validation_warnings": [w.message for w in validation_result.get_warnings()]
         }
 
@@ -271,7 +266,7 @@ class GeoJsonProcessor:
         # not depend on it.
         if self.save_timeseries_file and len(times):
             try:
-                fname = self._save_timeseries(times, heating, cooling, electricity, dhw, cooking_gas)
+                fname = self._save_timeseries(times, profiles, selection)
                 profile["timeseries_file"] = f"/api/files/{fname}"
             except Exception:
                 logger.exception(f"Timeseries save failed for {building_id}")
@@ -290,6 +285,53 @@ class GeoJsonProcessor:
         logger.info(f"Successfully processed feature {building_id} in {elapsed:.2f}s")
 
         return feature
+
+    def _run_thermal(
+        self, merged_attrs: dict[str, Any], use_milp: bool, building_id: Any,
+    ) -> tuple[Any, dict[str, Any]]:
+        """Solve the 5R1C model, or take the cached result for an identical
+        cfg, and collect every reported profile."""
+        cfg = CfgBuilding(merged_attrs).to_cfg_dict()
+        cache_key = compute_cfg_hash(cfg)
+        res = get_cached_result(cache_key)
+        if res is not None:
+            logger.info(f"Cache hit for feature {building_id} (key={cache_key[:12]}…)")
+        else:
+            res = run_model(cfg, plot=False, use_milp=use_milp)
+            store_result(cache_key, res)
+
+        elec = cfg.get("elecLoad")
+        profiles = {
+            "heating": res.get("heating", []),
+            "cooling": res.get("cooling", []),
+            "electricity": elec.values if isinstance(elec, pd.Series) else (elec or []),
+            # Absent from res (like electricity) when the request carried no
+            # dhw_liters/cooking_active occupancy signal -- a service
+            # building, or residential input missing that detail.
+            "hot_water": res.get("dhw", []),
+            "kitchen": res.get("cooking_gas", []),
+        }
+        return res.get("times", []), profiles
+
+    @staticmethod
+    def _occupancy_only(merged_attrs: dict[str, Any]) -> tuple[pd.DatetimeIndex, dict[str, Any]]:
+        """Profiles for a request that selects neither heating nor cooling:
+        occupancy's electricity plus the hot-water and kitchen series a
+        full run reports, without a solve. A full run places occupancy's
+        hours on the weather index, which the contract delivers in UTC;
+        without weather the same convention applies."""
+        elec = merged_attrs["elecLoad"]
+        times = elec.index if elec.index.tz is not None else elec.index.tz_localize("UTC")
+        dhw = dhw_cooking.reported_dhw_kwh(merged_attrs)
+        cooking = dhw_cooking.reported_cooking_gas_kwh(merged_attrs)
+        profiles = {
+            "heating": [],
+            "cooling": [],
+            "electricity": elec.values,
+            "hot_water": dhw.values if dhw is not None else [],
+            "kitchen": cooking.values if cooking is not None else [],
+        }
+        return times, profiles
 
     def _validate_array(self, data, array_name: str) -> np.ndarray:
         """
@@ -326,30 +368,35 @@ class GeoJsonProcessor:
             return np.array([], dtype=float)
 
     def _build_thermal_load_profile(
-        self, times, heating, cooling, electricity, dhw, cooking_gas, elapsed,
-        start_time, end_time, resolution, resolution_unit
+        self, times, profiles: dict[str, Any], selection: dict[str, str], elapsed,
+        start_time, end_time, resolution, resolution_unit, a_ref: float | None = None,
     ) -> dict[str, Any]:
         """
-        Build comprehensive thermal load profile matching response schema.
+        Build the thermal load profile matching the response schema, with
+        only the profiles ``selection`` asks for.
 
         Parameters
         ----------
         times : pd.DatetimeIndex or list
             Timestamps for the simulation.
-        heating, cooling, electricity, dhw : np.ndarray
-            Load arrays in kW -- thermal/electric energy, folded into
-            total_energy_demand.
-        cooking_gas : np.ndarray
-            Load array in kW_gas -- a different fuel channel (see
-            dhw_cooking.cooking_gas_energy_kwh), reported separately and
-            excluded from total_energy_demand rather than summed with
-            electricity/thermal kWh as if interchangeable.
+        profiles : dict
+            One array per name in PROFILES, in kW. heating, cooling,
+            electricity and hot_water are thermal/electric energy folded
+            into total_energy_demand. kitchen is kW_gas, a different fuel
+            channel (see dhw_cooking.cooking_gas_energy_kwh), reported
+            separately and excluded from total_energy_demand rather than
+            summed with electricity/thermal kWh as if interchangeable.
+        selection : dict
+            Output level per profile name, see :func:`resolve_outputs`.
         elapsed : float
             Processing time in seconds.
         start_time, end_time : str
             Time range strings.
         resolution, resolution_unit : str
             Time resolution specification.
+        a_ref : float, optional
+            Reference floor area in m2; with total_energy_demand it
+            yields summary.energy_intensity.
 
         Returns
         -------
@@ -399,72 +446,62 @@ class GeoJsonProcessor:
                 "std": {"value": float(np.std(arr)), "unit": power_unit}
             }
 
-        heating_stats = safe_stats(heating)
-        cooling_stats = safe_stats(np.abs(cooling))  # Ensure positive for cooling
-        electricity_stats = safe_stats(electricity)
-        dhw_stats = safe_stats(dhw)
+        arrays = {name: self._validate_array(profiles.get(name, []), name) for name in PROFILES}
         # A gas channel, not thermal/electric kWh -- kept out of safe_stats'
         # default units so it is never mistaken for one in the response.
-        cooking_gas_stats = safe_stats(cooking_gas, power_unit="kW_gas", energy_unit="kWh_gas")
+        units = {"kitchen": ("kW_gas", "kWh_gas")}
 
-        # Calculate overall metrics. cooking_gas is excluded: gas is a
-        # different fuel channel from electricity/thermal kWh, not another
-        # thermal load, so summing it here would make total_energy_demand
-        # mix units as if they were interchangeable.
-        total_energy = (
-            heating_stats["total"]["value"] + cooling_stats["total"]["value"]
-            + electricity_stats["total"]["value"] + dhw_stats["total"]["value"]
-        )
-        peak_heating = heating_stats["max"]["value"]
-        peak_cooling = cooling_stats["max"]["value"]
+        # Field names hot_water/kitchen match buem-gateway's v6-draft schema
+        # and enerplanet's own DB columns (hot_water_kwh_a/kitchen_kwh_a),
+        # not buem's internal dhw/cooking_gas attribute names.
+        summary: dict[str, Any] = {}
+        for name in PROFILES:
+            if selection[name] == "none":
+                continue
+            arr = np.abs(arrays[name]) if name == "cooling" else arrays[name]  # cooling reported positive
+            summary[name] = safe_stats(arr, *units.get(name, ("kW", "kWh")))
 
-        # Estimate floor area for energy intensity (if available)
-        energy_intensity = None
-        # This would need to be calculated from building attributes if available
+        if "heating" in summary:
+            summary["peak_heating_load"] = {"value": summary["heating"]["max"]["value"], "unit": "kW"}
+        if "cooling" in summary:
+            summary["peak_cooling_load"] = {"value": summary["cooling"]["max"]["value"], "unit": "kW"}
+        # Only when every summand is selected, so the field always means
+        # the same quantity. kitchen is excluded: gas is a different fuel
+        # channel from electricity/thermal kWh, not another thermal load,
+        # so summing it here would mix units as if they were
+        # interchangeable.
+        summands = ("heating", "cooling", "electricity", "hot_water")
+        if all(name in summary for name in summands):
+            total_energy = sum(summary[name]["total"]["value"] for name in summands)
+            summary["total_energy_demand"] = {"value": total_energy, "unit": "kWh"}
+            if a_ref:
+                summary["energy_intensity"] = {"value": total_energy / a_ref, "unit": "kWh/m2"}
 
         profile = {
             "start_time": start_iso,
             "end_time": end_iso,
             "resolution": resolution,
             "resolution_unit": resolution_unit,
-            "summary": {
-                "heating": heating_stats,
-                "cooling": cooling_stats,
-                "electricity": electricity_stats,
-                # Field names hot_water/kitchen match buem-gateway's
-                # v6-draft schema and enerplanet's own DB columns
-                # (hot_water_kwh_a/kitchen_kwh_a), not buem's internal
-                # dhw/cooking_gas attribute names.
-                "hot_water": dhw_stats,
-                "kitchen": cooking_gas_stats,
-                "total_energy_demand": {"value": total_energy, "unit": "kWh"},
-                "peak_heating_load": {"value": peak_heating, "unit": "kW"},
-                "peak_cooling_load": {"value": peak_cooling, "unit": "kW"}
-            }
+            "summary": summary,
         }
 
-        # Add energy intensity if floor area is available
-        if energy_intensity is not None:
-            profile["summary"]["energy_intensity"] = {"value": energy_intensity, "unit": "kWh/m2"}
-
-        # Inline arrays only on request; writing the file is a separate flag.
-        if self.include_timeseries and has_times:
-            profile["timeseries"] = {
-                "unit": "kW",  # applies to every series below except kitchen
-                "kitchen_unit": "kW_gas",
-                "timestamps": [t.isoformat() for t in times] if isinstance(times, pd.DatetimeIndex) else [str(t) for t in times],
-                "heating": heating.tolist(),
-                "cooling": cooling.tolist(),
-                "electricity": electricity.tolist(),
-                "hot_water": dhw.tolist(),
-                "kitchen": cooking_gas.tolist(),
-            }
+        series = [name for name in PROFILES if selection[name] == "series"]
+        if series and has_times:
+            timeseries: dict[str, Any] = {"unit": "kW"}  # applies to every series except kitchen
+            if "kitchen" in series:
+                timeseries["kitchen_unit"] = "kW_gas"
+            timeseries["timestamps"] = (
+                [t.isoformat() for t in times] if isinstance(times, pd.DatetimeIndex) else [str(t) for t in times]
+            )
+            for name in series:
+                timeseries[name] = arrays[name].tolist()
+            profile["timeseries"] = timeseries
 
         return profile
 
-    def _save_timeseries(self, times, heating, cooling, electricity, dhw, cooking_gas) -> str:
+    def _save_timeseries(self, times, profiles: dict[str, Any], selection: dict[str, str]) -> str:
         """
-        Save timeseries as gzip-compressed JSON.
+        Save the selected profiles' timeseries as gzip-compressed JSON.
 
         Returns
         -------
@@ -475,20 +512,11 @@ class GeoJsonProcessor:
         fname = f"buem_ts_{uuid.uuid4().hex}.json.gz"
         full_path = self.result_save_dir / fname
 
-        # Convert times to list of ISO strings (handles DatetimeIndex or list)
-        if isinstance(times, pd.DatetimeIndex):
-            time_list = [t.isoformat() for t in times]
-        else:
-            time_list = [t.isoformat() for t in times]
-
-        payload = {
-            "index": time_list,
-            "heat": [float(x) for x in heating.tolist()],
-            "cool": [float(x) for x in cooling.tolist()],
-            "electricity": [float(x) for x in electricity.tolist()] if len(electricity) else [],
-            "hot_water": [float(x) for x in dhw.tolist()] if len(dhw) else [],
-            "kitchen": [float(x) for x in cooking_gas.tolist()] if len(cooking_gas) else [],
-        }
+        file_keys = {"heating": "heat", "cooling": "cool"}
+        payload: dict[str, Any] = {"index": [t.isoformat() for t in times]}
+        for name in PROFILES:
+            if selection[name] != "none":
+                payload[file_keys.get(name, name)] = [float(x) for x in np.asarray(profiles[name], dtype=float)]
 
         with gzip.open(full_path, "wt", encoding="utf-8") as gz:
             json.dump(payload, gz, indent=None)
