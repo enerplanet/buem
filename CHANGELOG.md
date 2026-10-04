@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.7.0] - 2026-10-04
+
 **Breaking: the pinned contract moves from buem-gateway `schemas/v5`
 (tag v6.0.0) to `schemas/v6-draft` (commit ce5d6db).** Every request must
 now carry `building.building_type` (one of SFH, MFH, TH, AB, bakery,
