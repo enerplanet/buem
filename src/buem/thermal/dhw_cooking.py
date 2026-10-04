@@ -29,6 +29,8 @@ predating this feature) is a no-op.
 """
 from __future__ import annotations
 
+from typing import Any
+
 import pandas as pd
 
 from buem.config.reference_values import load_dhw_cooking_constants
@@ -379,6 +381,50 @@ def cooking_gas_energy_kwh(
     return (weights / weight_sum * annual_total_kwh).rename("cooking_gas_kWh")
 
 
+def reported_dhw_kwh(cfg: dict[str, Any]) -> pd.Series | None:
+    """Hourly DHW energy a run reports, or ``None`` when ``include_dhw`` is
+    false or the cfg carries no DHW signal.
+
+    Prefers the per-fixture-priced ``dhw_kwh`` and falls back to the
+    blended conversion of ``dhw_liters``.
+    """
+    if not cfg.get("include_dhw", True):
+        return None
+    dhw_kwh = cfg.get("dhw_kwh")
+    if isinstance(dhw_kwh, pd.Series):
+        return dhw_kwh.rename("dhw_kWh")
+    dhw_liters = cfg.get("dhw_liters")
+    if isinstance(dhw_liters, pd.Series):
+        return dhw_energy_kwh(dhw_liters)
+    return None
+
+
+def reported_cooking_gas_kwh(cfg: dict[str, Any]) -> pd.Series | None:
+    """Hourly gas-cooking energy a run reports, or ``None`` unless the
+    household cooks with gas and the cfg carries a cooking signal.
+
+    occupancy models cooking appliances electrically, so an electrically
+    cooking household's cooking energy already sits inside elecLoad and is
+    never reported a second time. ``cooking_kwh`` (occupancy's own
+    per-appliance draws) is preferred; a cfg carrying only the boolean
+    ``cooking_active`` gets the per-household reference total spread
+    across the flagged hours, scaled by ``residential_units``.
+    """
+    if str(cfg.get("cooking_carrier", "gas")).lower() != "gas":
+        return None
+    cooking_kwh = cfg.get("cooking_kwh")
+    if isinstance(cooking_kwh, pd.Series):
+        return cooking_kwh.rename("cooking_gas_kWh")
+    cooking_active = cfg.get("cooking_active")
+    if not isinstance(cooking_active, pd.Series):
+        return None
+    units = max(float(cfg.get("residential_units") or 1.0), 1.0)
+    return cooking_gas_energy_kwh(
+        cooking_active,
+        annual_total_kwh=COOKING_ANNUAL_KWH_PER_HOUSEHOLD * units,
+    )
+
+
 __all__ = [
     "COOKING_ANNUAL_KWH_PER_HOUSEHOLD",
     "COOKING_HEAT_GAIN_FRACTION",
@@ -397,4 +443,6 @@ __all__ = [
     "cooking_gas_energy_kwh",
     "dhw_energy_kwh",
     "dhw_energy_kwh_annual_fallback",
+    "reported_cooking_gas_kwh",
+    "reported_dhw_kwh",
 ]
