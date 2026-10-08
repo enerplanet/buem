@@ -25,10 +25,11 @@ figures produced after this change.
   `pyproject.toml` and `infrastructure/env/buem_env.yml`, matching the
   equipment table the BuEM research paper describes.
 - `HOUSEHOLD_EQUIPMENT_TYPES` lists the eight new ids, so the
-  `equipment` attribute accepts them. The pinned request schema still
-  enumerates the 29 earlier ids under `building.equipment`, so a request
-  naming a new id is rejected until buem-gateway's `schemas/v6-draft` adds
-  them and the pin is re-synced.
+  `equipment` attribute accepts them.
+- `src/buem/integration/json_schema/` is re-synced to buem-gateway commit
+  55aeea761fda35de526e6a43b99ee4a3cca1d4c6, `schemas/v6-draft`, whose
+  `building.equipment` lists all 37 ids; the response schema and the
+  examples are unchanged since ce5d6db.
 
 ## [6.7.0] - 2026-10-04
 
