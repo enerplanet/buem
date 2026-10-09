@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.8.0] - 2026-10-09
+
 **Results change for every residential building.** The occupancy pin
 moves to `enerplanet/occupancy@v6.2.0-enerplanet.1`, whose household
 equipment table has 37 items instead of 29 (laptop, smart speaker, wifi
@@ -30,6 +32,19 @@ figures produced after this change.
   55aeea761fda35de526e6a43b99ee4a3cca1d4c6, `schemas/v6-draft`, whose
   `building.equipment` lists all 37 ids; the response schema and the
   examples are unchanged since ce5d6db.
+
+### Removed
+
+- `src/buem/weather/from_merra.py`, the standalone MERRA-2 loader. It had
+  no importer, entry point or documentation reference since `weather`
+  became a compulsory dependency on 2026-08-03.
+
+### Fixed
+
+- CI runs on pushes to `enerplanet` and on pull requests against it. The
+  workflow had triggered only for `main` and `develop`, so nothing on the
+  fork's branch had been checked since the branch was created; the first
+  run cleared seven lint findings.
 
 ## [6.7.0] - 2026-10-04
 
