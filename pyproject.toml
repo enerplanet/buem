@@ -75,7 +75,7 @@ dependencies = [
     # the grid model size electricity from one function at one release. Fork
     # tags are vX.Y.Z-enerplanet.N and install package version
     # X.Y.Z+enerplanet.N.
-    "occupancy @ git+https://github.com/enerplanet/occupancy.git@v6.1.0-enerplanet.1",
+    "occupancy @ git+https://github.com/enerplanet/occupancy.git@v6.2.0-enerplanet.1",
 ]
 
 [project.optional-dependencies]

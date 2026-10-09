@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+**Results change for every residential building.** The occupancy pin
+moves to `enerplanet/occupancy@v6.2.0-enerplanet.1`, whose household
+equipment table has 37 items instead of 29 (laptop, smart speaker, wifi
+router, streaming stick, robot vacuum, air fryer, coffee machine, EV
+charger; tumble dryer ownership 0.63; five obsolete items downweighted).
+On the Loenen pilot buildings annual electricity rises from 2,327 to
+3,294 kWh (SFH) and from 2,535 to 3,257 kWh (TH), kitchen energy from
+357 to 732 and from 431 to 549 kWh; heating moves by -1 to -4 per cent
+and cooling by +2 to +10 per cent through the internal gains. Hot water
+is unchanged. Figures produced with 6.7.0 are not comparable with
+figures produced after this change.
+
+### Changed
+
+- `occupancy` pinned to `enerplanet/occupancy@v6.2.0-enerplanet.1` in
+  `pyproject.toml` and `infrastructure/env/buem_env.yml`, matching the
+  equipment table the BuEM research paper describes.
+- `HOUSEHOLD_EQUIPMENT_TYPES` lists the eight new ids, so the
+  `equipment` attribute accepts them.
+- `src/buem/integration/json_schema/` is re-synced to buem-gateway commit
+  55aeea761fda35de526e6a43b99ee4a3cca1d4c6, `schemas/v6-draft`, whose
+  `building.equipment` lists all 37 ids; the response schema and the
+  examples are unchanged since ce5d6db.
+
 ## [6.7.0] - 2026-10-04
 
 **Breaking: the pinned contract moves from buem-gateway `schemas/v5`

@@ -531,7 +531,7 @@ ATTRIBUTE_SPECS: dict[str, AttributeSpec] = {
         doc=(
             "Optional per-item household-equipment inclusion/exclusion map: "
             "{equipment_id: bool, ...}, where each equipment_id is one of "
-            "HOUSEHOLD_EQUIPMENT_TYPES (occupancy's 29 registered "
+            "HOUSEHOLD_EQUIPMENT_TYPES (occupancy's 37 registered "
             "appliances). true guarantees the item is treated as owned "
             "(overrides its normal ownership-probability draw); false "
             "guarantees it's excluded entirely; an omitted id uses "

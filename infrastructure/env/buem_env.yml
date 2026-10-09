@@ -124,7 +124,7 @@ dependencies:
     # the grid model size electricity from one function at one release. Fork
     # tags are vX.Y.Z-enerplanet.N and install package version
     # X.Y.Z+enerplanet.N. Keep pyproject.toml's reference in step.
-    - occupancy @ git+https://github.com/enerplanet/occupancy.git@v6.1.0-enerplanet.1
+    - occupancy @ git+https://github.com/enerplanet/occupancy.git@v6.2.0-enerplanet.1
     # Commit rather than a tag: upstream's main is 19 commits past v1.9.2
     # and no published tag names what is in use, so pinning to the latest
     # release would roll those commits back. Installs 1.9.3.dev19+g36ff059a7.

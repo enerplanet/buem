@@ -153,7 +153,7 @@ derive_service_capacity = _occupancy_demand.derive_service_capacity
 
 
 # Household equipment ids, hand-copied from occupancy's
-# households/data/equipment.json (29 items). Unlike
+# households/data/equipment.json (37 items). Unlike
 # RESIDENTIAL_BUILDING_TYPES's service-type counterpart
 # (occupancy.SERVICE_BUILDING_TYPES), occupancy exposes no stable
 # top-level export for its equipment registry, so this set can drift out
@@ -167,4 +167,6 @@ HOUSEHOLD_EQUIPMENT_TYPES = frozenset({
     "tv_1", "tv_2", "tv_3", "vcr_dvd", "tv_receiver_box", "hob", "oven",
     "microwave", "kettle", "small_cooking_group", "dish_washer",
     "tumble_dryer", "washing_machine", "washer_dryer", "lighting",
+    "laptop", "smart_speaker", "wifi_router", "streaming_stick",
+    "robot_vacuum", "air_fryer", "coffee_machine", "ev_charger",
 })
