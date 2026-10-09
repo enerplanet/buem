@@ -427,7 +427,7 @@ class CfgBuilding:
         self._build_internal_cfg()
 
     @classmethod
-    def from_json_file(cls, path: str) -> "CfgBuilding":
+    def from_json_file(cls, path: str) -> CfgBuilding:
         """Construct CfgBuilding from a JSON file path."""
         with open(path, "r", encoding="utf-8") as fh:
             s = fh.read()

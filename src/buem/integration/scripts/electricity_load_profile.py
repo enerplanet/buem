@@ -60,7 +60,7 @@ def load_electricity_load_profile(path: str) -> list:
     lower = resolved.lower()
     if lower.endswith(".csv"):
         return _load_csv(resolved)
-    if lower.endswith(".json.gz") or lower.endswith(".gz"):
+    if lower.endswith((".json.gz", ".gz")):
         return _load_json(gzip.open(resolved, "rt", encoding="utf-8"), resolved)
     if lower.endswith(".json"):
         return _load_json(open(resolved, "r", encoding="utf-8"), resolved)
@@ -87,7 +87,8 @@ def _load_json(fh, path: str) -> list:
     with fh:
         data = json.load(fh)
     if not isinstance(data, list):
-        raise ValueError("electricity_load_profile: JSON content must be a flat array of numbers")
+        # ValueError on purpose: callers treat every loader failure as invalid input.
+        raise ValueError("electricity_load_profile: JSON content must be a flat array of numbers")  # noqa: TRY004
     try:
         return [float(v) for v in data]
     except (TypeError, ValueError):
