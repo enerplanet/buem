@@ -1,5 +1,5 @@
 {
-  "$comment": "Pinned copy of enerplanet/buem-gateway@31bc503a50e20976c088ef7733f88c6956c30146 schemas/v6-draft/request_schema.json. Do not edit here -- re-sync via contract.txt to update.",
+  "$comment": "Pinned copy of enerplanet/buem-gateway@2ab4ef417747567201a00d272328732280e9aee7 schemas/v6-draft/request_schema.json. Do not edit here -- re-sync via contract.txt to update.",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://buem.energy/schemas/contract/v6-draft/request",
   "title": "BUEM GeoJSON Request Schema (API contract v6-draft)",
