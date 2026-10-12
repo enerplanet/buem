@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   hour, indexed from 1 January of the resolved year, used unscaled as the
   building's electricity and marked `use_provided_elecLoad`. Both forms now
   reject an empty array and non-numeric, non-finite or negative values.
+- `src/buem/integration/json_schema/` is re-synced to buem-gateway commit
+  31bc503a50e20976c088ef7733f88c6956c30146, `schemas/v6-draft`, whose
+  `electricity_load_profile` is `oneOf` values or path; the response schema
+  and the examples are unchanged since 55aeea7.
 
 ## [6.8.0] - 2026-10-09
 
