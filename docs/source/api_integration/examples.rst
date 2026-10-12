@@ -65,7 +65,7 @@ Minimal Python Client
             "geometry": {"type": "Point", "coordinates": [5.0, 52.0]},
             "properties": {
                 "start_time": "2018-01-01T00:00:00Z",
-                "end_time": "2018-12-31T23:00:00Z",
+                "end_time": "2019-01-01T00:00:00Z",
                 "buem": {
                     "building": {
                         "A_ref": {"value": 100.0, "unit": "m2"},

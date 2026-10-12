@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- An occupancy-only request (neither heating nor cooling selected) returns
+  the period `properties.start_time` to `properties.end_time`, start
+  inclusive and end exclusive, instead of the whole weather year: a week
+  from 2018-01-01T00:00:00Z to 2018-01-08T00:00:00Z is 168 hourly values,
+  and the response's `start_time`, `end_time` and summary describe that
+  period. A period outside the simulated year is rejected. A request that
+  selects heating or cooling still returns the whole year.
+
 ## [6.9.0] - 2026-10-12
 
 **Results change for every residential building, most of all for
