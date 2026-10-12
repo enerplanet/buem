@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+**Results change for every residential building, most of all for
+apartment blocks.** The occupancy pin moves to
+`enerplanet/occupancy@v6.3.0-enerplanet.1`. A building with more than one
+dwelling is now one household per dwelling, up to 20 distinct households
+summed, instead of one household scaled by the dwelling count, so an
+apartment block's peak falls to roughly a third while its annual total
+follows the mix of dwellings drawn (occupancy MFH NL, 20 dwellings: peak
+85 to 25 kW, peak/mean 18.5 to 4.9). Every feature that arrives with an
+id is seeded from that id and the weather year, so two buildings with
+identical attributes no longer share a profile; this also moves
+single-dwelling results away from the 6.8.0 figures (the Loenen SFH
+3,294.1 kWh among them). The batch and analysis runners build attributes
+without an id and keep the construction-derived seed. Figures produced
+with 6.8.0 are not comparable with figures produced after this change.
+
 ### Added
 
 - `buem.inputs.electricity_load_profile` accepts inline `values` (an hourly
@@ -19,6 +34,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   2ab4ef417747567201a00d272328732280e9aee7, `schemas/v6-draft`, whose
   `electricity_load_profile` is `oneOf` values or path; the response schema
   and the examples are unchanged since 55aeea7.
+
+### Changed
+
+- `AttributeBuilder.generate_electricity_profile()` passes the feature's
+  `building_id` to `occupancy.building_demand()`, which seeds the
+  generation from it when no explicit `seed` is set.
+- occupancy pin `v6.2.0-enerplanet.1` to `v6.3.0-enerplanet.1` in
+  `pyproject.toml` and `infrastructure/env/buem_env.yml`.
+- The `residential_units` and `seed` attribute docs describe the summed
+  households and the id-derived seed.
 
 ## [6.8.0] - 2026-10-09
 
