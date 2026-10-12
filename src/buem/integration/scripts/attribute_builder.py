@@ -231,9 +231,10 @@ class AttributeBuilder:
         elecLoad can be overridden with a caller-supplied series
         (use_provided_elecLoad); Q_ig/occ_nothome/occ_sleeping still come
         from a real occupancy generation in that case. The household-size,
-        archetype, capacity, blending, dwelling-scaling and cooking-carrier
+        archetype, capacity, blending, multi-dwelling and cooking-carrier
         rules live in occupancy since 6.1.0+enerplanet.1; buem prices the
         DHW draws (thermal.dhw_cooking) and aligns everything to weather.
+        The feature's building_id seeds the generation when no seed is set.
         """
         use_provided_elec = bool(self.merged_attrs.get("use_provided_elecLoad", False))
         provided_elec_load: pd.Series | None = None
@@ -269,6 +270,7 @@ class AttributeBuilder:
                 ),
                 cooking_carrier=str(self.merged_attrs.get("cooking_carrier", "electric")),
                 seed=self.merged_attrs.get("seed", ATTRIBUTE_SPECS["seed"].default),
+                building_id=self.building_id,
                 num_persons=self.merged_attrs.get("num_persons"),
                 archetype=self.merged_attrs.get("archetype"),
                 capacity=self.merged_attrs.get("capacity"),
