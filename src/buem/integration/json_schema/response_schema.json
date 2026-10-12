@@ -1,8 +1,9 @@
 {
+  "$comment": "Pinned copy of enerplanet/buem-gateway@2ab4ef417747567201a00d272328732280e9aee7 schemas/v6-draft/response_schema.json. Do not edit here -- re-sync via contract.txt to update.",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://buem.energy/schemas/contract/v6-draft/response",
   "title": "BUEM GeoJSON Response Schema (API contract v6-draft)",
-  "description": "Response schema for the BUEM building energy model. Echoes the request structure and adds thermal_load_profile and model_metadata to each feature's buem node. All output quantities carry explicit unit fields. Timeseries arrays declare their unit once at the array level. Draft, not yet promoted \u2014 see v6-draft-contract-backlog for open items, including this file's own hot_water/kitchen additions below.",
+  "description": "Response schema for the BUEM building energy model. Echoes the request structure and adds thermal_load_profile and model_metadata to each feature's buem node. All output quantities carry explicit unit fields. Timeseries arrays declare their unit once at the array level. Draft, not yet promoted — see v6-draft-contract-backlog for open items, including this file's own hot_water/kitchen additions below.",
   "type": "object",
   "required": [
     "type",
@@ -84,7 +85,7 @@
         },
         "id": {
           "type": "string",
-          "description": "Building identifier \u2014 echoed from request"
+          "description": "Building identifier — echoed from request"
         },
         "geometry": {
           "$ref": "#/$defs/geometry"
@@ -111,7 +112,7 @@
           },
           "minItems": 2,
           "maxItems": 3,
-          "description": "Geographic coordinates [longitude, latitude, elevation?] \u2014 echoed from request"
+          "description": "Geographic coordinates [longitude, latitude, elevation?] — echoed from request"
         }
       }
     },
@@ -128,20 +129,20 @@
         "start_time": {
           "type": "string",
           "format": "date-time",
-          "description": "Simulation start time \u2014 echoed from request"
+          "description": "Simulation start time — echoed from request"
         },
         "end_time": {
           "type": "string",
           "format": "date-time",
-          "description": "Simulation end time \u2014 echoed from request"
+          "description": "Simulation end time — echoed from request"
         },
         "resolution": {
           "type": "string",
-          "description": "Time resolution value \u2014 echoed from request"
+          "description": "Time resolution value — echoed from request"
         },
         "resolution_unit": {
           "type": "string",
-          "description": "Time resolution unit \u2014 echoed from request"
+          "description": "Time resolution unit — echoed from request"
         },
         "buem": {
           "$ref": "#/$defs/buem"
@@ -158,7 +159,7 @@
       "properties": {
         "building": {
           "type": "object",
-          "description": "Echoed from request \u2014 contains name (optional display label), envelope, thermal, and all classification fields"
+          "description": "Echoed from request — contains name (optional display label), envelope, thermal, and all classification fields"
         },
         "solver": {
           "type": "object",
@@ -166,11 +167,11 @@
         },
         "inputs": {
           "type": "object",
-          "description": "Echoed from request \u2014 user-provided timeseries inputs, if any were supplied"
+          "description": "Echoed from request — user-provided timeseries inputs, if any were supplied"
         },
         "weather": {
           "type": "object",
-          "description": "Echoed from request when present \u2014 the resolved hourly timeseries the model ran against"
+          "description": "Echoed from request when present — the resolved hourly timeseries the model ran against"
         },
         "thermal_load_profile": {
           "$ref": "#/$defs/thermal_load_profile"
@@ -240,7 +241,7 @@
               "$ref": "#/$defs/energy_summary"
             }
           ],
-          "description": "Domestic hot water useful-heat DEMAND \u2014 fuel-agnostic (what the building's systems must deliver, same family as heating/cooling), not literal delivered energy of any one carrier. Included in total_energy_demand below. All-zero for a service building_type (bakery, clinic, hotel, office, restaurant, school, supermarket, warehouse) \u2014 BuEM has no hot water model for service buildings, regardless of include_dhw."
+          "description": "Domestic hot water useful-heat DEMAND — fuel-agnostic (what the building's systems must deliver, same family as heating/cooling), not literal delivered energy of any one carrier. Included in total_energy_demand below. All-zero for a service building_type (bakery, clinic, hotel, office, restaurant, school, supermarket, warehouse) — BuEM has no hot water model for service buildings, regardless of include_dhw."
         },
         "kitchen": {
           "allOf": [
@@ -248,7 +249,7 @@
               "$ref": "#/$defs/gas_energy_summary"
             }
           ],
-          "description": "Estimated cooking GAS energy \u2014 literal delivered gas (a national heating:cooking ratio proxy, not metered or physically modelled), not a fuel-agnostic demand figure like hot_water. A different fuel carrier from every other field in this summary, marked with its own kWh_gas/kW_gas units for that reason. NOT included in total_energy_demand below \u2014 folding a gas quantity into an otherwise thermal/electric total remains an open question. All-zero for a service building_type (bakery, clinic, hotel, office, restaurant, school, supermarket, warehouse) \u2014 BuEM has no cooking model for service buildings, regardless of cooking_carrier."
+          "description": "Estimated cooking GAS energy — literal delivered gas (a national heating:cooking ratio proxy, not metered or physically modelled), not a fuel-agnostic demand figure like hot_water. A different fuel carrier from every other field in this summary, marked with its own kWh_gas/kW_gas units for that reason. NOT included in total_energy_demand below — folding a gas quantity into an otherwise thermal/electric total remains an open question. All-zero for a service building_type (bakery, clinic, hotel, office, restaurant, school, supermarket, warehouse) — BuEM has no cooking model for service buildings, regardless of cooking_carrier."
         },
         "total_energy_demand": {
           "allOf": [
@@ -352,7 +353,7 @@
         "min",
         "mean"
       ],
-      "description": "Statistical summary for a GAS energy carrier over the simulation period \u2014 same shape as energy_summary, but the quantities carry gas-specific units (kWh_gas/kW_gas) so a consumer can never mistake this for electric or thermal energy.",
+      "description": "Statistical summary for a GAS energy carrier over the simulation period — same shape as energy_summary, but the quantities carry gas-specific units (kWh_gas/kW_gas) so a consumer can never mistake this for electric or thermal energy.",
       "properties": {
         "total": {
           "allOf": [
@@ -430,7 +431,7 @@
             "MW_gas"
           ],
           "default": "kW_gas",
-          "description": "Unit for the kitchen array specifically \u2014 gas, never electric or thermal. Present whenever kitchen is."
+          "description": "Unit for the kitchen array specifically — gas, never electric or thermal. Present whenever kitchen is."
         },
         "timestamps": {
           "type": "array",
@@ -466,14 +467,14 @@
           "items": {
             "type": "number"
           },
-          "description": "Domestic hot water useful-heat energy at each time step. All-zero for a service building_type \u2014 see load_summary.hot_water."
+          "description": "Domestic hot water useful-heat energy at each time step. All-zero for a service building_type — see load_summary.hot_water."
         },
         "kitchen": {
           "type": "array",
           "items": {
             "type": "number"
           },
-          "description": "Estimated gas-cooking power at each time step \u2014 see kitchen_unit above, not unit. All-zero for a service building_type \u2014 see load_summary.kitchen."
+          "description": "Estimated gas-cooking power at each time step — see kitchen_unit above, not unit. All-zero for a service building_type — see load_summary.kitchen."
         }
       }
     },
@@ -682,6 +683,5 @@
         }
       }
     }
-  },
-  "$comment": "Pinned copy of enerplanet/buem-gateway@55aeea761fda35de526e6a43b99ee4a3cca1d4c6 schemas/v6-draft/response_schema.json. Do not edit here -- re-sync via contract.txt to update."
+  }
 }

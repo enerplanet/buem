@@ -22,6 +22,19 @@ single-dwelling results away from the 6.8.0 figures (the Loenen SFH
 without an id and keep the construction-derived seed. Figures produced
 with 6.8.0 are not comparable with figures produced after this change.
 
+### Added
+
+- `buem.inputs.electricity_load_profile` accepts inline `values` (an hourly
+  array in `kWh`, `kW` or `Wh`) as an alternative to `path`; exactly one of
+  the two. The values take the same route as a file: converted to kWh per
+  hour, indexed from 1 January of the resolved year, used unscaled as the
+  building's electricity and marked `use_provided_elecLoad`. Both forms now
+  reject an empty array and non-numeric, non-finite or negative values.
+- `src/buem/integration/json_schema/` is re-synced to buem-gateway commit
+  2ab4ef417747567201a00d272328732280e9aee7, `schemas/v6-draft`, whose
+  `electricity_load_profile` is `oneOf` values or path; the response schema
+  and the examples are unchanged since 55aeea7.
+
 ### Changed
 
 - `AttributeBuilder.generate_electricity_profile()` passes the feature's

@@ -1,8 +1,9 @@
 {
+  "$comment": "Pinned copy of enerplanet/buem-gateway@2ab4ef417747567201a00d272328732280e9aee7 schemas/v6-draft/request_schema.json. Do not edit here -- re-sync via contract.txt to update.",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://buem.energy/schemas/contract/v6-draft/request",
   "title": "BUEM GeoJSON Request Schema (API contract v6-draft)",
-  "description": "Request schema for the BUEM building energy model. Each feature represents one building. The buem object carries building (complete physical description \u2014 classification, geometry, and thermal performance), solver (execution settings), inputs (optional timeseries overrides), and weather (a pre-resolved hourly timeseries \u2014 buem-gateway resolves it from no external service). All measurable quantities carry an explicit unit field. SI units are assumed when unit is omitted. Dimensionless ratios use unit: '-'. Draft, not yet promoted.",
+  "description": "Request schema for the BUEM building energy model. Each feature represents one building. The buem object carries building (complete physical description — classification, geometry, and thermal performance), solver (execution settings), inputs (optional timeseries overrides), and weather (a pre-resolved hourly timeseries — buem-gateway resolves it from no external service). All measurable quantities carry an explicit unit field. SI units are assumed when unit is omitted. Dimensionless ratios use unit: '-'. Draft, not yet promoted.",
   "type": "object",
   "required": [
     "type",
@@ -69,7 +70,7 @@
           },
           "minItems": 2,
           "maxItems": 3,
-          "description": "[longitude, latitude, elevation?] \u2014 authoritative building location, used for weather station lookup"
+          "description": "[longitude, latitude, elevation?] — authoritative building location, used for weather station lookup"
         }
       }
     },
@@ -364,7 +365,7 @@
       "properties": {
         "name": {
           "type": "string",
-          "description": "Human-readable building label (e.g. '3434 \u00b7 Single-family House'). Display only \u2014 no effect on simulation."
+          "description": "Human-readable building label (e.g. '3434 · Single-family House'). Display only — no effect on simulation."
         },
         "A_ref": {
           "allOf": [
@@ -408,11 +409,11 @@
             "supermarket",
             "warehouse"
           ],
-          "description": "Building type code. Residential: SFH single-family, MFH multi-family, AB apartment block, TH terraced house \u2014 occupancy is driven by num_persons/archetype/equipment. Service: bakery, clinic, hotel, office, restaurant, school, supermarket, warehouse \u2014 occupancy is driven by capacity instead, and BuEM has no hot water or cooking model for these, so thermal_load_profile.summary.hot_water/kitchen come back all-zero regardless of cooking_carrier/include_dhw. Re-added as an enum in v6-draft; the v5 migration dropped this check."
+          "description": "Building type code. Residential: SFH single-family, MFH multi-family, AB apartment block, TH terraced house — occupancy is driven by num_persons/archetype/equipment. Service: bakery, clinic, hotel, office, restaurant, school, supermarket, warehouse — occupancy is driven by capacity instead, and BuEM has no hot water or cooking model for these, so thermal_load_profile.summary.hot_water/kitchen come back all-zero regardless of cooking_carrier/include_dhw. Re-added as an enum in v6-draft; the v5 migration dropped this check."
         },
         "construction_period": {
           "type": "string",
-          "description": "TABULA construction-year class code for the building's country (e.g. \"01\", \"02\"), not a literal year range. Class boundaries are defined per country by each national TABULA dataset and are not consistent across countries. Classification metadata only \u2014 has no effect on the simulation, which reads geometry and U-values from envelope directly."
+          "description": "TABULA construction-year class code for the building's country (e.g. \"01\", \"02\"), not a literal year range. Class boundaries are defined per country by each national TABULA dataset and are not consistent across countries. Classification metadata only — has no effect on the simulation, which reads geometry and U-values from envelope directly."
         },
         "country": {
           "type": "string",
@@ -490,12 +491,12 @@
             "none"
           ],
           "default": "electric",
-          "description": "Energy carrier the household cooks with. 'electric' (default) leaves modelled cooking energy inside electricity \u2014 correct for induction/electric hobs and never double-counts. 'gas' reports it separately as thermal_load_profile.summary.kitchen (gas energy, kWh_gas) instead. 'none' reports no separate cooking term and applies no gain correction; the electrically modelled cooking stays inside electricity. Case-insensitive."
+          "description": "Energy carrier the household cooks with. 'electric' (default) leaves modelled cooking energy inside electricity — correct for induction/electric hobs and never double-counts. 'gas' reports it separately as thermal_load_profile.summary.kitchen (gas energy, kWh_gas) instead. 'none' reports no separate cooking term and applies no gain correction; the electrically modelled cooking stays inside electricity. Case-insensitive."
         },
         "include_dhw": {
           "type": "boolean",
           "default": true,
-          "description": "Whether to report domestic hot water energy alongside space heating, as thermal_load_profile.summary.hot_water. false suppresses it without affecting the space-heating solve \u2014 for a caller whose DHW is met by a separate system it accounts for itself."
+          "description": "Whether to report domestic hot water energy alongside space heating, as thermal_load_profile.summary.hot_water. false suppresses it without affecting the space-heating solve — for a caller whose DHW is met by a separate system it accounts for itself."
         },
         "residential_units": {
           "type": "integer",
@@ -688,7 +689,7 @@
         "id",
         "type"
       ],
-      "description": "A single building surface. Geometry and thermal properties are defined together. For ventilation elements, no surface geometry is needed \u2014 only air_changes.",
+      "description": "A single building surface. Geometry and thermal properties are defined together. For ventilation elements, no surface geometry is needed — only air_changes.",
       "properties": {
         "id": {
           "type": "string",
@@ -697,7 +698,7 @@
         },
         "name": {
           "type": "string",
-          "description": "Human-readable label for this surface (e.g. 'South Facade', 'Main Roof'). Display only \u2014 no effect on simulation."
+          "description": "Human-readable label for this surface (e.g. 'South Facade', 'Main Roof'). Display only — no effect on simulation."
         },
         "type": {
           "type": "string",
@@ -824,7 +825,7 @@
     },
     "thermal": {
       "type": "object",
-      "description": "Building-wide thermal performance parameters aligned with IEE TABULA definitions. All fields are optional \u2014 model defaults (SI units) apply when omitted. Per-element thermal properties (U-value, g_gl, etc.) are defined directly on each envelope element.",
+      "description": "Building-wide thermal performance parameters aligned with IEE TABULA definitions. All fields are optional — model defaults (SI units) apply when omitted. Per-element thermal properties (U-value, g_gl, etc.) are defined directly on each envelope element.",
       "properties": {
         "n_air_infiltration": {
           "allOf": [
@@ -832,7 +833,7 @@
               "$ref": "#/$defs/air_change_qty"
             }
           ],
-          "description": "Uncontrolled air infiltration rate through gaps and cracks in the building fabric \u2014 TABULA: n_air_infiltration",
+          "description": "Uncontrolled air infiltration rate through gaps and cracks in the building fabric — TABULA: n_air_infiltration",
           "default": {
             "value": 0.5,
             "unit": "1/h"
@@ -844,7 +845,7 @@
               "$ref": "#/$defs/air_change_qty"
             }
           ],
-          "description": "Ventilation air change rate during building occupancy \u2014 TABULA: n_air_use",
+          "description": "Ventilation air change rate during building occupancy — TABULA: n_air_use",
           "default": {
             "value": 0.5,
             "unit": "1/h"
@@ -856,7 +857,7 @@
               "$ref": "#/$defs/heat_capacity_qty"
             }
           ],
-          "description": "Internal thermal capacity per m\u00b2 of floor area \u2014 how much heat the building structure can store. TABULA: c_m",
+          "description": "Internal thermal capacity per m² of floor area — how much heat the building structure can store. TABULA: c_m",
           "default": {
             "value": 165.0,
             "unit": "kJ/(m2K)"
@@ -878,7 +879,7 @@
               "$ref": "#/$defs/temperature_qty"
             }
           ],
-          "description": "Heating setpoint \u2014 minimum acceptable indoor temperature",
+          "description": "Heating setpoint — minimum acceptable indoor temperature",
           "default": {
             "value": 18.0,
             "unit": "degC"
@@ -890,7 +891,7 @@
               "$ref": "#/$defs/temperature_qty"
             }
           ],
-          "description": "Cooling setpoint \u2014 maximum acceptable indoor temperature",
+          "description": "Cooling setpoint — maximum acceptable indoor temperature",
           "default": {
             "value": 21.0,
             "unit": "degC"
@@ -915,7 +916,7 @@
               "$ref": "#/$defs/dimensionless_qty"
             }
           ],
-          "description": "Shading reduction factor for horizontal surfaces (e.g. roof) \u2014 TABULA: F_sh_hor",
+          "description": "Shading reduction factor for horizontal surfaces (e.g. roof) — TABULA: F_sh_hor",
           "default": {
             "value": 0.8,
             "unit": "-"
@@ -927,7 +928,7 @@
               "$ref": "#/$defs/dimensionless_qty"
             }
           ],
-          "description": "Shading reduction factor for vertical surfaces (e.g. walls, windows) \u2014 TABULA: F_sh_vert",
+          "description": "Shading reduction factor for vertical surfaces (e.g. walls, windows) — TABULA: F_sh_vert",
           "default": {
             "value": 0.75,
             "unit": "-"
@@ -939,7 +940,7 @@
               "$ref": "#/$defs/dimensionless_qty"
             }
           ],
-          "description": "Window frame area fraction \u2014 proportion of the window opening that is frame rather than glass. TABULA: F_f",
+          "description": "Window frame area fraction — proportion of the window opening that is frame rather than glass. TABULA: F_f",
           "default": {
             "value": 0.2,
             "unit": "-"
@@ -951,7 +952,7 @@
               "$ref": "#/$defs/dimensionless_qty"
             }
           ],
-          "description": "Window non-perpendicularity correction factor \u2014 TABULA: F_w",
+          "description": "Window non-perpendicularity correction factor — TABULA: F_w",
           "default": {
             "value": 1.0,
             "unit": "-"
@@ -984,7 +985,7 @@
             }
           ],
           "deprecated": true,
-          "description": "Accepted and ignored by buem-model; no effect on the run. Internal gains come from the occupancy model. Internal heat gains from occupants, appliances, and lighting per unit floor area. Used in the ISO 13790 energy balance as a heat source that reduces heating demand and increases cooling demand. TABULA: phi_int. Typical residential: 3\u20135 W/m\u00b2.",
+          "description": "Accepted and ignored by buem-model; no effect on the run. Internal gains come from the occupancy model. Internal heat gains from occupants, appliances, and lighting per unit floor area. Used in the ISO 13790 energy balance as a heat source that reduces heating demand and increases cooling demand. TABULA: phi_int. Typical residential: 3–5 W/m².",
           "default": {
             "value": 3.0,
             "unit": "W/m2"
@@ -997,7 +998,7 @@
             }
           ],
           "deprecated": true,
-          "description": "Accepted and ignored by buem-model; no effect on the run. Hot water comes from the occupancy model (see include_dhw). Net energy need for domestic hot water per unit floor area per year. Added to the heating energy need in the final energy balance. TABULA: q_w_nd. Typical residential: ~12.5 kWh/(m\u00b2\u00b7a).",
+          "description": "Accepted and ignored by buem-model; no effect on the run. Hot water comes from the occupancy model (see include_dhw). Net energy need for domestic hot water per unit floor area per year. Added to the heating energy need in the final energy balance. TABULA: q_w_nd. Typical residential: ~12.5 kWh/(m²·a).",
           "default": {
             "value": 12.5,
             "unit": "kWh/(m2.a)"
@@ -1040,14 +1041,42 @@
       "properties": {
         "electricity_load_profile": {
           "type": "object",
-          "required": [
-            "path"
+          "description": "Hourly electricity consumption profile for the building, given inline as values or by file path, exactly one of the two. It replaces the occupancy-generated electricity, and the response's electricity profile returns it in kWh per hour, not scaled by residential_units. For residential building_type it is added to the internal heat gains and so affects heating and cooling demand. For service building_type it is accepted and returned but does not affect heating or cooling, since their internal gains already include equipment and lighting.",
+          "oneOf": [
+            {
+              "required": [
+                "values"
+              ],
+              "not": {
+                "required": [
+                  "path"
+                ]
+              }
+            },
+            {
+              "required": [
+                "path"
+              ],
+              "not": {
+                "required": [
+                  "values"
+                ]
+              }
+            }
           ],
-          "description": "Hourly electricity consumption profile for the building, referenced by file path. The file must be a regular file inside BUEM_DATA_DIR in the buem-model container, at most 32 MiB (decompressed size for .gz); buem-model rejects any other path, including a symlink that resolves outside BUEM_DATA_DIR, and refuses file-based profiles when BUEM_DATA_DIR is not set. When provided, the profile is used directly as the internal heat gain input instead of the model-generated occupancy-based profile. Electricity consumption heats the building interior and therefore affects heating and cooling demand. Supported formats: CSV (single column of values), JSON array, or gzipped JSON (.gz).",
           "properties": {
+            "values": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "number",
+                "minimum": 0
+              },
+              "description": "One value per hour from 1 January 00:00 UTC of the properties.start_time year, covering that whole year: 8760 values, or 8784 in a leap year."
+            },
             "path": {
               "type": "string",
-              "description": "Path to the profile file inside BUEM_DATA_DIR in the model container, either absolute or relative to BUEM_DATA_DIR (e.g. /data/profiles/5.3453464_52.4353446_electricity_2018.csv with BUEM_DATA_DIR=/data)."
+              "description": "Path to the profile file inside BUEM_DATA_DIR in the model container, either absolute or relative to BUEM_DATA_DIR (e.g. /data/profiles/5.3453464_52.4353446_electricity_2018.csv with BUEM_DATA_DIR=/data). The file must be a regular file inside BUEM_DATA_DIR, at most 32 MiB (decompressed size for .gz); buem-model rejects any other path, including a symlink that resolves outside BUEM_DATA_DIR, and refuses file-based profiles when BUEM_DATA_DIR is not set. Supported formats: CSV (single column of values), JSON array, or gzipped JSON (.gz)."
             },
             "unit": {
               "type": "string",
@@ -1057,7 +1086,22 @@
                 "kW"
               ],
               "default": "kWh",
-              "description": "Unit of the values in the file. Defaults to kWh when omitted."
+              "description": "Unit of the profile values. Defaults to kWh when omitted. Wh is accepted with path only."
+            }
+          },
+          "if": {
+            "required": [
+              "values"
+            ]
+          },
+          "then": {
+            "properties": {
+              "unit": {
+                "enum": [
+                  "kWh",
+                  "kW"
+                ]
+              }
             }
           }
         }
@@ -1217,6 +1261,5 @@
         "unit": "-"
       }
     }
-  },
-  "$comment": "Pinned copy of enerplanet/buem-gateway@55aeea761fda35de526e6a43b99ee4a3cca1d4c6 schemas/v6-draft/request_schema.json. Do not edit here -- re-sync via contract.txt to update."
+  }
 }
