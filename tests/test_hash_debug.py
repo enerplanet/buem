@@ -24,15 +24,18 @@ def _load_v3_attrs() -> dict:
 
 
 def test_hash_determinism():
-    """cfg hash must be identical for two builds from the same attributes."""
+    """cfg hash must be identical for two builds of the same building.
+
+    The id is held fixed: it seeds the occupancy generation, so two ids
+    are two buildings."""
     payload_attrs = _load_v3_attrs()
 
-    builder1 = AttributeBuilder(payload_attrs=payload_attrs, building_id="test1")
+    builder1 = AttributeBuilder(payload_attrs=payload_attrs, building_id="test")
     merged1 = builder1.build()
     cfg1 = CfgBuilding(merged1).to_cfg_dict()
     h1 = compute_cfg_hash(cfg1)
 
-    builder2 = AttributeBuilder(payload_attrs=payload_attrs, building_id="test2")
+    builder2 = AttributeBuilder(payload_attrs=payload_attrs, building_id="test")
     merged2 = builder2.build()
     cfg2 = CfgBuilding(merged2).to_cfg_dict()
     h2 = compute_cfg_hash(cfg2)
