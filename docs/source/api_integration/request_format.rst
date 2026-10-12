@@ -41,7 +41,7 @@ GeoJSON Structure
       },
       "properties": {
         "start_time": "2018-01-01T00:00:00Z",
-        "end_time": "2019-01-01T00:00:00Z",
+        "end_time": "2018-12-31T23:00:00Z",
         "resolution": "60",
         "resolution_unit": "minutes",
         "buem": {
@@ -51,11 +51,12 @@ GeoJSON Structure
       }
     }
 
-``start_time`` and ``end_time`` bound the simulation period, start inclusive
-and end exclusive, so a full year runs from 1 January 00:00 to the next
-1 January 00:00. A request that selects neither heating nor cooling
-(see ``buem.outputs``) returns exactly that period; a request that solves
-the thermal model returns the whole weather year.
+``start_time`` and ``end_time`` bound the reported period, both inclusive:
+a full year runs from 1 January 00:00 to 31 December 23:00, and a season or
+a week returns exactly its hours (1 January 00:00 to 7 January 23:00 is 168
+hourly values). The thermal model always solves the whole year of
+``start_time``; the response's series and summary cover only the requested
+period. A period reaching outside that year is rejected.
 
 Measurement values
 --------------------

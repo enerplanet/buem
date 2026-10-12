@@ -123,6 +123,7 @@ def test_geojson_processor_strips_building_attributes_from_response(monkeypatch)
     enerplanet/buem#10."""
     monkeypatch.setenv("BUEM_WEATHER_FALLBACK", "false")
     payload = _payload_with_weather(_WEATHER_JSON)
+    payload["features"][0]["properties"]["end_time"] = "2018-01-01T01:00:00Z"  # the two weather hours
     result = GeoJsonProcessor(payload=payload, include_timeseries=False).process()
 
     buem_out = result["features"][0]["properties"]["buem"]

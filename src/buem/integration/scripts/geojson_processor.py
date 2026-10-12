@@ -246,10 +246,10 @@ class GeoJsonProcessor:
             solver_used = "MILP" if use_milp else "LP (CLARABEL)"
         else:
             times, profiles = self._occupancy_only(merged_attrs)
-            times, profiles = self._window(
-                times, profiles, props.get("start_time"), props.get("end_time"),
-            )
             solver_used = "none (occupancy only)"
+        times, profiles = self._window(
+            times, profiles, props.get("start_time"), props.get("end_time"),
+        )
         elapsed = time.time() - start
 
         profile = self._build_thermal_load_profile(
@@ -344,26 +344,28 @@ class GeoJsonProcessor:
 
     @staticmethod
     def _window(
-        times: pd.DatetimeIndex, profiles: dict[str, Any], start_time: Any, end_time: Any,
-    ) -> tuple[pd.DatetimeIndex, dict[str, Any]]:
-        """Cut the series to the request period, start_time inclusive and
-        end_time exclusive, so a period of (end - start) / resolution steps
-        returns exactly that many values. A period outside the simulated
-        hours is an error rather than a shorter series: a demand series has
-        to cover the model period it is asked for. Only the occupancy-only
-        path takes this; a thermal run still returns the whole year."""
-        if not (start_time or end_time):
+        times: Any, profiles: dict[str, Any], start_time: Any, end_time: Any,
+    ) -> tuple[Any, dict[str, Any]]:
+        """Cut the series to the request period, start_time and end_time
+        both inclusive, so a full year is 1 January 00:00 to 31 December
+        23:00 and any shorter period (a season, a week) returns exactly its
+        hours. Each stamp counts as the hour it starts in, so an hh:30
+        weather index keeps the same hours as an on-the-hour one. The model
+        still solves the whole year; only the reported series is cut. A
+        period outside the simulated hours is an error rather than a
+        shorter series."""
+        if not (start_time or end_time) or not isinstance(times, pd.DatetimeIndex) or times.empty:
             return times, profiles
         index = times if times.tz is not None else times.tz_localize("UTC")
-        step = index[1] - index[0] if len(index) > 1 else pd.Timedelta(hours=1)
-        start = _utc(start_time) if start_time else index[0]
-        end = _utc(end_time) if end_time else index[-1] + step
-        if start < index[0] or end > index[-1] + step:
+        hours = index.floor("h")
+        start = _utc(start_time) if start_time else hours[0]
+        end = _utc(end_time) if end_time else hours[-1]
+        if start < hours[0] or end > hours[-1]:
             raise ValueError(
                 f"start_time {start_time!r} to end_time {end_time!r} lies outside the "
-                f"simulated hours {index[0].isoformat()} to {(index[-1] + step).isoformat()}."
+                f"simulated hours {hours[0].isoformat()} to {hours[-1].isoformat()}."
             )
-        mask = (index >= start) & (index < end)
+        mask = (hours >= start) & (hours <= end)
         if not mask.any():
             raise ValueError(
                 f"start_time {start_time!r} to end_time {end_time!r} contains no simulated hour."

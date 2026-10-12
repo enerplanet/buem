@@ -18,6 +18,9 @@ def payload() -> dict:
     one building's inline arrays and one written file."""
     p = json.loads(_EXAMPLE.read_text(encoding="utf-8"))
     p["features"] = p["features"][:1]
+    # The example's inline weather covers three hours; the reported period
+    # must lie within the simulated hours.
+    p["features"][0]["properties"]["end_time"] = "2018-01-01T02:00:00Z"
     return p
 
 

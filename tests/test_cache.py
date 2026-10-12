@@ -42,7 +42,7 @@ def test_cache_hit_is_faster():
     # (2024/2025) which BUEM_WEATHER_DATA_DIR may not have archives for.
     props = payload["features"][0]["properties"]
     props["start_time"] = "2018-01-01T00:00:00Z"
-    props["end_time"] = "2019-01-01T00:00:00Z"
+    props["end_time"] = "2018-12-31T23:00:00Z"
 
     t0 = time.time()
     proc = GeoJsonProcessor(payload=payload, include_timeseries=False)

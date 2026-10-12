@@ -13,7 +13,7 @@
       },
       "properties": {
         "start_time": "2018-01-01T00:00:00Z",
-        "end_time": "2019-01-01T00:00:00Z",
+        "end_time": "2018-12-31T23:00:00Z",
         "resolution": "60",
         "resolution_unit": "minutes",
         "buem": {
