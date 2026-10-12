@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.9.0] - 2026-10-12
+
 **Results change for every residential building, most of all for
 apartment blocks.** The occupancy pin moves to
 `enerplanet/occupancy@v6.3.0-enerplanet.1`. A building with more than one
