@@ -19,6 +19,7 @@ from __future__ import annotations
 import gzip
 import json
 import logging
+import math
 import os
 from pathlib import Path
 from typing import Any
@@ -38,6 +39,35 @@ REQUIRED_WEATHER_COLUMNS = ("T", "GHI", "DHI", "DNI")
 # An hourly year is well under 1 MiB in every supported format. Upper bound
 # on bytes read per profile file, gzip output included.
 MAX_PROFILE_FILE_BYTES = 32 * 1024 * 1024
+
+
+def electricity_values_to_kwh(values: Any, unit: str, source: str) -> list[float]:
+    """Check a flat hourly electricity array and convert it to kWh per hour
+    (buem's elecLoad convention, see ``_ELEC_UNIT_TO_KWH_FACTOR``).
+    ``source`` says where the values came from, for the error message:
+    ``"values"`` for an inline array, ``"at <path>"`` for a file."""
+    if not isinstance(values, list) or not values:
+        raise ValueError(
+            f"electricity_load_profile {source} did not contain a "
+            "non-empty array of values."
+        )
+    if unit not in _ELEC_UNIT_TO_KWH_FACTOR:
+        raise ValueError(
+            f"electricity_load_profile unit must be one of "
+            f"{sorted(_ELEC_UNIT_TO_KWH_FACTOR)}, got {unit!r}."
+        )
+    factor = _ELEC_UNIT_TO_KWH_FACTOR[unit]
+    try:
+        converted = [float(v) * factor for v in values]
+    except (TypeError, ValueError) as exc:
+        raise ValueError(
+            f"electricity_load_profile {source} contains a non-numeric value."
+        ) from exc
+    if not all(math.isfinite(v) for v in converted):
+        raise ValueError(f"electricity_load_profile {source} contains a non-finite value.")
+    if min(converted) < 0.0:
+        raise ValueError(f"electricity_load_profile {source} contains a negative value.")
+    return converted
 
 
 def _resolve_profile_path(path: str, label: str) -> Path:
@@ -125,23 +155,7 @@ def load_electricity_load_values(path: str, unit: str = "kWh") -> list[float]:
             f"Could not parse electricity_load_profile file {path!r} as {p.suffix[1:]}."
         ) from exc
 
-    if not isinstance(values, list) or not values:
-        raise ValueError(
-            f"electricity_load_profile at {path!r} did not contain a "
-            "non-empty array of values."
-        )
-    if unit not in _ELEC_UNIT_TO_KWH_FACTOR:
-        raise ValueError(
-            f"electricity_load_profile unit must be one of "
-            f"{sorted(_ELEC_UNIT_TO_KWH_FACTOR)}, got {unit!r}."
-        )
-    factor = _ELEC_UNIT_TO_KWH_FACTOR[unit]
-    try:
-        return [float(v) * factor for v in values]
-    except (TypeError, ValueError) as exc:
-        raise ValueError(
-            f"electricity_load_profile at {path!r} contains a non-numeric value."
-        ) from exc
+    return electricity_values_to_kwh(values, unit, f"at {path!r}")
 
 
 def load_weather_profile(path: str, fmt: str = "json") -> pd.DataFrame:

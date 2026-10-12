@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `buem.inputs.electricity_load_profile` accepts inline `values` (an hourly
+  array in `kWh`, `kW` or `Wh`) as an alternative to `path`; exactly one of
+  the two. The values take the same route as a file: converted to kWh per
+  hour, indexed from 1 January of the resolved year, used unscaled as the
+  building's electricity and marked `use_provided_elecLoad`. Both forms now
+  reject an empty array and non-numeric, non-finite or negative values.
+
 ## [6.8.0] - 2026-10-09
 
 **Results change for every residential building.** The occupancy pin

@@ -30,6 +30,7 @@ from buem.config.building_registry import (
     DEFAULT_YEAR,
 )
 from buem.integration.scripts.profile_file_loader import (
+    electricity_values_to_kwh,
     load_electricity_load_values,
     load_weather_profile,
 )
@@ -438,20 +439,19 @@ class GeoJsonValidator:
             building_attributes["weather"] = weather_df
             building_attributes["use_provided_weather"] = True
 
-        # Caller-supplied electricity load profile file
-        # (buem.inputs.electricity_load_profile) -- a flat hourly array
-        # with no timestamp column, indexed here against the resolved
-        # year above (or AttributeBuilder's own DEFAULT_YEAR if none was
+        # Caller-supplied electricity load profile
+        # (buem.inputs.electricity_load_profile), inline values or a file:
+        # a flat hourly array with no timestamp column, indexed here
+        # against the resolved year above (or AttributeBuilder's own
+        # DEFAULT_YEAR if none was
         # resolved). A length that doesn't match the real weather index is
         # not checked here -- AttributeBuilder._reindex_or_raise() catches
         # a genuine mismatch downstream with a clear error, once the real
         # weather index is known.
         inputs_block = buem_data.get("inputs")
         elec_profile = inputs_block.get("electricity_load_profile") if isinstance(inputs_block, dict) else None
-        if isinstance(elec_profile, dict) and elec_profile.get("path"):
-            values = load_electricity_load_values(
-                elec_profile["path"], elec_profile.get("unit", "kWh"),
-            )
+        if isinstance(elec_profile, dict):
+            values = self._electricity_values(elec_profile)
             index = pd.date_range(
                 f"{resolved_year or DEFAULT_YEAR}-01-01", periods=len(values), freq="h",
             )
@@ -471,6 +471,18 @@ class GeoJsonValidator:
             "Converted request (building.envelope) to internal format (building_attributes.components)",
             f"features[{feature_idx}].properties.buem",
         )
+
+    @staticmethod
+    def _electricity_values(profile: dict) -> list[float]:
+        """kWh per hour from ``electricity_load_profile``: inline ``values``
+        or a file ``path``, exactly one of the two."""
+        has_values, has_path = "values" in profile, bool(profile.get("path"))
+        if has_values == has_path:
+            raise ValueError("electricity_load_profile needs exactly one of values or path.")
+        unit = profile.get("unit", "kWh")
+        if has_values:
+            return electricity_values_to_kwh(profile["values"], unit, "values")
+        return load_electricity_load_values(profile["path"], unit)
 
     @staticmethod
     def _check_weather_profile_ranges(
