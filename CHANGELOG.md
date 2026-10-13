@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Every response covers the period `properties.start_time` to
+  `properties.end_time`, both inclusive, instead of the whole weather year:
+  2018-01-01T00:00:00Z to 2018-01-07T23:00:00Z is 168 hourly values, and
+  the response's `start_time`, `end_time`, series and summary (totals,
+  peaks, energy intensity) describe that period. A full year is 1 January
+  00:00 to 31 December 23:00. The thermal model still solves the whole
+  year, so a season's heating is the same as those hours of an annual run.
+  A period outside the year of `start_time` is rejected; a request ending
+  at 1 January 00:00 of the next year is now one hour too long.
+
 ## [6.9.0] - 2026-10-12
 
 **Results change for every residential building, most of all for

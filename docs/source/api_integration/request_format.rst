@@ -51,6 +51,13 @@ GeoJSON Structure
       }
     }
 
+``start_time`` and ``end_time`` bound the reported period, both inclusive:
+a full year runs from 1 January 00:00 to 31 December 23:00, and a season or
+a week returns exactly its hours (1 January 00:00 to 7 January 23:00 is 168
+hourly values). The thermal model always solves the whole year of
+``start_time``; the response's series and summary cover only the requested
+period. A period reaching outside that year is rejected.
+
 Measurement values
 --------------------
 

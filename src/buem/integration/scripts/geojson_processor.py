@@ -27,6 +27,12 @@ PROFILES = ("heating", "cooling", "electricity", "hot_water", "kitchen")
 OUTPUT_LEVELS = ("none", "summary", "series")
 
 
+def _utc(value: Any) -> pd.Timestamp:
+    """A request timestamp as UTC; one without a zone is read as UTC."""
+    stamp = pd.Timestamp(value)
+    return stamp.tz_localize("UTC") if stamp.tz is None else stamp.tz_convert("UTC")
+
+
 def resolve_outputs(buem: dict[str, Any], include_timeseries: bool) -> dict[str, str]:
     """Output level per profile from the request's ``buem.outputs``.
 
@@ -241,6 +247,9 @@ class GeoJsonProcessor:
         else:
             times, profiles = self._occupancy_only(merged_attrs)
             solver_used = "none (occupancy only)"
+        times, profiles = self._window(
+            times, profiles, props.get("start_time"), props.get("end_time"),
+        )
         elapsed = time.time() - start
 
         profile = self._build_thermal_load_profile(
@@ -332,6 +341,40 @@ class GeoJsonProcessor:
             "kitchen": cooking.values if cooking is not None else [],
         }
         return times, profiles
+
+    @staticmethod
+    def _window(
+        times: Any, profiles: dict[str, Any], start_time: Any, end_time: Any,
+    ) -> tuple[Any, dict[str, Any]]:
+        """Cut the series to the request period, start_time and end_time
+        both inclusive, so a full year is 1 January 00:00 to 31 December
+        23:00 and any shorter period (a season, a week) returns exactly its
+        hours. Each stamp counts as the hour it starts in, so an hh:30
+        weather index keeps the same hours as an on-the-hour one. The model
+        still solves the whole year; only the reported series is cut. A
+        period outside the simulated hours is an error rather than a
+        shorter series."""
+        if not (start_time or end_time) or not isinstance(times, pd.DatetimeIndex) or times.empty:
+            return times, profiles
+        index = times if times.tz is not None else times.tz_localize("UTC")
+        hours = index.floor("h")
+        start = _utc(start_time) if start_time else hours[0]
+        end = _utc(end_time) if end_time else hours[-1]
+        if start < hours[0] or end > hours[-1]:
+            raise ValueError(
+                f"start_time {start_time!r} to end_time {end_time!r} lies outside the "
+                f"simulated hours {hours[0].isoformat()} to {hours[-1].isoformat()}."
+            )
+        mask = (hours >= start) & (hours <= end)
+        if not mask.any():
+            raise ValueError(
+                f"start_time {start_time!r} to end_time {end_time!r} contains no simulated hour."
+            )
+        kept = {
+            name: (np.asarray(values)[mask] if len(values) == len(index) else values)
+            for name, values in profiles.items()
+        }
+        return index[mask], kept
 
     def _validate_array(self, data, array_name: str) -> np.ndarray:
         """
