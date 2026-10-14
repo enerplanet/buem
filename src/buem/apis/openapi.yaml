@@ -204,7 +204,10 @@ paths:
     get:
       operationId: healthCheck
       summary: Health check
-      description: Returns service status.
+      description: >
+        Returns service status and the BuEM release and commit that serve it.
+        Every response, not only this one, also carries them in the
+        X-BuEM-Version and X-BuEM-Commit headers.
       tags: [System]
       responses:
         "200":
@@ -217,8 +220,16 @@ paths:
                   status:
                     type: string
                     example: ok
+                  version:
+                    type: string
+                    description: Release version of the image, for example 6.9.0
+                  commit:
+                    type: string
+                    description: Git commit the image was built from, or "unknown"
               example:
                 status: ok
+                version: 6.9.0
+                commit: 99343d6407f192f1e075a8dc89ab5c11cc6b9c3c
 
 # ─────────────────────────────────────────────────────────────────────
 # Components

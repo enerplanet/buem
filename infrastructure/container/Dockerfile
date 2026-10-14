@@ -59,6 +59,12 @@ ENV PYTHONPATH=/app/src
 COPY . /app
 WORKDIR /app/src
 
+# Reported by /api/health and the X-BuEM-Version/X-BuEM-Commit headers;
+# docker-publish.yml passes the release tag and commit.
+ARG BUEM_VERSION=""
+ARG BUEM_COMMIT=""
+ENV BUEM_VERSION=$BUEM_VERSION BUEM_COMMIT=$BUEM_COMMIT
+
 EXPOSE 5000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
