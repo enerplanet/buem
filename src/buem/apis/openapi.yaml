@@ -204,7 +204,10 @@ paths:
     get:
       operationId: healthCheck
       summary: Health check
-      description: Returns service status.
+      description: >
+        Returns service status and the BuEM release and commit that serve it.
+        Every response, not only this one, also carries them in the
+        X-BuEM-Version and X-BuEM-Commit headers.
       tags: [System]
       responses:
         "200":
@@ -217,8 +220,16 @@ paths:
                   status:
                     type: string
                     example: ok
+                  version:
+                    type: string
+                    description: Release version of the image, for example 6.9.0
+                  commit:
+                    type: string
+                    description: Git commit the image was built from, or "unknown"
               example:
                 status: ok
+                version: 6.9.0
+                commit: 99343d6407f192f1e075a8dc89ab5c11cc6b9c3c
 
 # ─────────────────────────────────────────────────────────────────────
 # Components
@@ -919,7 +930,12 @@ components:
       properties:
         model_version:
           type: string
-          example: BUEM-v2.0
+          description: Release version that computed this result, as on /api/health
+          example: 6.9.0
+        model_commit:
+          type: string
+          description: Git commit that computed this result, as on /api/health
+          example: 99343d6407f192f1e075a8dc89ab5c11cc6b9c3c
         solver_used:
           type: string
           example: LP (CLARABEL)
@@ -1234,7 +1250,8 @@ components:
                     peak_cooling_load: {value: 2.1, unit: kW}
                     energy_intensity: {value: 72.4, unit: "kWh/m2"}
                 model_metadata:
-                  model_version: BUEM-v2.0
+                  model_version: 6.9.0
+                  model_commit: 99343d6407f192f1e075a8dc89ab5c11cc6b9c3c
                   solver_used: LP (CLARABEL)
                   processing_time: {value: 3.12, unit: s}
                   weather_year: 2018

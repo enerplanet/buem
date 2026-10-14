@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `GET /api/health` returns the release and commit that serve it,
+  `{"status": "ok", "version": "6.9.0", "commit": "<sha>"}`, and every
+  response carries the same values in the `X-BuEM-Version` and
+  `X-BuEM-Commit` headers. The published image takes them from its release
+  tag and commit; elsewhere `version` is the installed package version and
+  `commit` is `unknown`, unless `BUEM_VERSION` and `BUEM_COMMIT` are set.
+- Each result's `model_metadata` carries the same values: `model_version`
+  is the release instead of the fixed `BUEM-v3.0`, and the new
+  `model_commit` is the commit.
+
 ### Changed
 
 - Every response covers the period `properties.start_time` to

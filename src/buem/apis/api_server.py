@@ -6,6 +6,7 @@ from pathlib import Path
 from flask import Flask, jsonify, send_from_directory
 from flask_swagger_ui import get_swaggerui_blueprint
 
+from buem import build_info
 from buem.apis.files_api import bp as files_bp
 from buem.apis.model_api import bp as model_bp
 from buem.env import load_env
@@ -65,9 +66,17 @@ def create_app():
     if handler not in werk_logger.handlers:
         werk_logger.addHandler(handler)
 
+    version, commit = build_info()
+
+    @app.after_request
+    def stamp_version(response):
+        response.headers["X-BuEM-Version"] = version
+        response.headers["X-BuEM-Commit"] = commit
+        return response
+
     @app.route("/api/health", methods=["GET"])
     def health():
-        return jsonify({"status": "ok"}), 200
+        return jsonify({"status": "ok", "version": version, "commit": commit}), 200
 
     app.logger.info(f"BUEM API starting, log: {LOG_FILE}")
     return app
