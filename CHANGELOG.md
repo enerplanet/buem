@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.10.0] - 2026-10-14
+
+**Requests ending at 1 January 00:00 of the next year are now rejected.**
+`start_time` and `end_time` are both inclusive, so a full year ends at
+31 December 23:00, and every response, thermal runs included, covers only
+the requested period instead of the whole weather year.
+
 ### Added
 
 - `GET /api/health` returns the release and commit that serve it,
