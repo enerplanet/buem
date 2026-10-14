@@ -14,6 +14,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from buem import build_info
 from buem.config.cfg_building import CfgBuilding
 from buem.integration.scripts.attribute_builder import AttributeBuilder
 from buem.integration.scripts.geojson_validator import create_validation_report, validate_geojson_request
@@ -262,8 +263,10 @@ class GeoJsonProcessor:
         # Model metadata -- a sibling of thermal_load_profile directly
         # under buem (per response_schema.json's `buem` $def and the
         # gateway's ResponseBlock struct), not nested inside profile.
+        model_version, model_commit = build_info()
         buem["model_metadata"] = {
-            "model_version": "BUEM-v3.0",
+            "model_version": model_version,
+            "model_commit": model_commit,
             "solver_used": solver_used,
             "processing_time": {"value": round(elapsed, 3), "unit": "s"},
             "weather_year": int(merged_attrs["year"]),

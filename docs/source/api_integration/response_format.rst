@@ -75,7 +75,9 @@ server-side-saved file instead of inlining 8760 points per building. See
 model_metadata
 ----------------
 
-Diagnostics, not physics: ``model_version``, ``solver_used`` (e.g.
+Diagnostics, not physics: ``model_version`` and ``model_commit`` (the
+release and commit that computed the result, as on ``/api/health``),
+``solver_used`` (e.g.
 ``scipy-sparse``, ``OSQP``, ``CBC``), ``processing_time``,
 ``weather_year``, ``parallel_thermal``, ``use_chunked_processing``,
 ``validation_warnings``.

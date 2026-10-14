@@ -24,3 +24,18 @@ def test_version_falls_back_to_the_package_version(monkeypatch):
     body = create_app().test_client().get("/api/health").get_json()
     assert body["version"] == __version__
     assert body["commit"] == "unknown"
+
+
+def test_each_result_records_the_build_version(monkeypatch):
+    from test_period_window import _occupancy_only_feature
+
+    from buem.integration.scripts.geojson_processor import GeoJsonProcessor
+
+    monkeypatch.setenv("BUEM_WEATHER_FALLBACK", "false")
+    monkeypatch.setenv("BUEM_VERSION", "6.9.0")
+    monkeypatch.setenv("BUEM_COMMIT", "abc1234")
+    feature, result = _occupancy_only_feature("2018-01-01T00:00:00Z", "2018-01-01T23:00:00Z")
+    out = GeoJsonProcessor(payload={})._process_single_feature(feature, result)
+    metadata = out["properties"]["buem"]["model_metadata"]
+    assert metadata["model_version"] == "6.9.0"
+    assert metadata["model_commit"] == "abc1234"
