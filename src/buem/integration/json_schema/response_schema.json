@@ -1,5 +1,5 @@
 {
-  "$comment": "Pinned copy of enerplanet/buem-gateway@2ab4ef417747567201a00d272328732280e9aee7 schemas/v6-draft/response_schema.json. Do not edit here -- re-sync via contract.txt to update.",
+  "$comment": "Pinned copy of enerplanet/buem-gateway@8fb742a157729c25a5da577221817bc1cf87371c schemas/v6-draft/response_schema.json. Do not edit here -- re-sync via contract.txt to update.",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://buem.energy/schemas/contract/v6-draft/response",
   "title": "BUEM GeoJSON Response Schema (API contract v6-draft)",
@@ -414,14 +414,8 @@
       "description": "Hourly timeseries arrays, one per profile the request set to series. unit applies to every array except kitchen, which is gas and carries its own kitchen_unit (same electric/thermal-vs-gas split as load_summary's energy_summary vs gas_energy_summary). kitchen is present only with gas cooking.",
       "properties": {
         "unit": {
-          "type": "string",
-          "enum": [
-            "kW",
-            "W",
-            "MW"
-          ],
-          "default": "kW",
-          "description": "Unit for the heating, cooling, electricity, and hot_water arrays"
+          "const": "kW",
+          "description": "Unit for the heating, cooling, electricity, and hot_water arrays. Always kW"
         },
         "kitchen_unit": {
           "type": "string",
@@ -526,7 +520,11 @@
         },
         "model_version": {
           "type": "string",
-          "description": "BUEM model version used"
+          "description": "buem-model release that computed this feature, e.g. 6.10.0. model_commit tells apart images built outside a release."
+        },
+        "model_commit": {
+          "type": "string",
+          "description": "buem-model commit that computed this feature, or unknown when the image does not record it."
         },
         "solver_used": {
           "type": "string",

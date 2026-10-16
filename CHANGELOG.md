@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `src/buem/integration/json_schema/` is re-synced to buem-gateway commit
+  8fb742a157729c25a5da577221817bc1cf87371c (buem-gateway v7.4.0),
+  `schemas/v6-draft`, whose `model_metadata` documents `model_commit` and
+  whose series unit is fixed to `kW`; the request schema is unchanged.
+
 ## [6.10.0] - 2026-10-14
 
 **Requests ending at 1 January 00:00 of the next year are now rejected.**
