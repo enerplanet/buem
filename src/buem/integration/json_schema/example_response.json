@@ -120,7 +120,8 @@
             }
           },
           "model_metadata": {
-            "model_version":          "BUEM-v4.0",
+            "model_version":          "6.10.0",
+            "model_commit":           "3f2a9c1",
             "solver_used":            "scipy-sparse",
             "processing_time":        { "value": 3.12, "unit": "s" },
             "weather_year":           2018,
