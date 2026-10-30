@@ -192,8 +192,8 @@ function Invoke-DockerStatus {
 }
 
 function Invoke-DockerShell {
-    Write-Host "Opening shell in buem-api container..." -ForegroundColor Blue
-    docker exec -it buem-api bash
+    Write-Host "Opening shell in the api container..." -ForegroundColor Blue
+    docker compose -f $ComposeFile exec api bash
 }
 
 function Invoke-Test {

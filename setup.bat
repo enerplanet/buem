@@ -226,8 +226,8 @@ docker compose -f %COMPOSE_FILE% ps
 goto :end
 
 :cmd_docker_shell
-echo Opening shell in buem-api container...
-docker exec -it buem-api bash
+echo Opening shell in the api container...
+docker compose -f %COMPOSE_FILE% exec api bash
 goto :end
 
 :cmd_test

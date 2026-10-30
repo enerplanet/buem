@@ -66,7 +66,7 @@ The Compose file includes a health check that calls ``/api/health`` every
 .. code-block:: bash
 
    docker compose ps
-   docker compose logs buem-api
+   docker compose logs api
 
 .. code-block:: yaml
 

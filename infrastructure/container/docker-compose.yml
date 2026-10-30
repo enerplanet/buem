@@ -7,14 +7,16 @@
 # ── Logs / status / shell ───────────────────────────────────────────────────
 #   docker compose -f infrastructure/container/docker-compose.yml logs -f
 #   docker compose -f infrastructure/container/docker-compose.yml ps
-#   docker exec -it buem-api bash
+#   docker compose -f infrastructure/container/docker-compose.yml exec api bash
 # ──────────────────────────────────────────────────────────────────────────────
+name: buem
+
 services:
-  buem-api:
+  api:
+    image: ghcr.io/enerplanet/buem-model:${BUEM_MODEL_IMAGE_TAG:-latest}
     build:
       context: ../..
       dockerfile: infrastructure/container/Dockerfile
-    container_name: buem-api
     env_file: ../../.env
     environment:
       - PYTHONPATH=/app/src
