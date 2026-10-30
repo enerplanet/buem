@@ -31,7 +31,7 @@ The included ``docker-compose.yml`` provides a complete setup:
 
     version: '3.8'
     services:
-      buem-api:
+      api:
         build: .
         ports:
           - "5000:5000"
@@ -116,7 +116,7 @@ For production environments:
 
     version: '3.8'
     services:
-      buem-api:
+      api:
         image: buem:production
         restart: unless-stopped
         ports:

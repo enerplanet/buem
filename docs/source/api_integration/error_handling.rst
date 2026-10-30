@@ -56,7 +56,7 @@ Debugging Checklist
 2. Ensure all component U-values are positive and areas > 0.
 3. Check that total window area does not exceed its parent wall area.
 4. Verify ``BUEM_WEATHER_DIR`` is set and the CSV file exists.
-5. Review container logs: ``docker logs buem-api``.
+5. Review container logs: ``docker compose -f infrastructure/container/docker-compose.yml logs api``.
 6. Verify file permissions for results directory.
 
 Error Recovery Strategies

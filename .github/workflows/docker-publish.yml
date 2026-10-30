@@ -3,7 +3,7 @@ name: Publish Docker image
 # Builds the BuEM API image from this repo's own checkout (no cross-repo
 # `git clone`) and pushes it to GHCR. The `enerplanet` integration branch is
 # the release train: a push there moves `:latest`, so the packaged deployment
-# (buem-gateway/environment/docker-compose.prod.yml, image
+# (buem-gateway/environment/docker-compose.yml, image
 # ghcr.io/enerplanet/buem-model) picks up fixes on the next `docker compose
 # pull`. Semver tags (v*.*.*) additionally publish {{version}} and
 # {{major}}.{{minor}} for pinned deployments.
