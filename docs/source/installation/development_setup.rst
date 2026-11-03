@@ -110,7 +110,8 @@ Contribution Workflow
 
 .. code-block:: bash
 
-    git checkout -b feature/your-feature-name
+    git fetch origin
+    git checkout -b feature/your-feature-name origin/dev
 
 2. **Make Changes and Test:**
 
@@ -135,7 +136,7 @@ Contribution Workflow
     git commit -m "Add feature: description"
     git push origin feature/your-feature-name
 
-5. **Create Pull Request**
+5. **Create Pull Request** against ``dev``. ``enerplanet`` is the release branch and only receives merges from ``dev``.
 
 Debugging Configuration
 -----------------------
